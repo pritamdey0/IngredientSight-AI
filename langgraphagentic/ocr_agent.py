@@ -174,7 +174,7 @@ def ocr_node(state: dict) -> dict:
         client = get_gemini_client()
         image = Image.open(image_path)
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-1.5-flash",
             contents=[_VISION_PROMPT, image],
         )
         state["ocr_text"] = response.text.strip() if response.text else ""
