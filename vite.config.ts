@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
   // Production: Use VITE_API_URL if set (Render backend URL)
   // Development: Use local backend configuration
   const isProduction = mode === 'production';
-  const apiUrl = env.VITE_API_URL;
+  const apiUrl = env.VITE_API_URL || env.VITE_API_BASE_URL;
   
   let backendPort = 8000;
   let backendHost = 'localhost';
@@ -53,7 +53,7 @@ export default defineConfig(({ mode }) => {
       // Expose VITE_API_URL to the frontend bundle at build time.
       // In production (Vercel), set this to your Render backend URL.
       // In dev, the proxy below handles /api/* automatically.
-      '__BACKEND_URL__': JSON.stringify(env.VITE_API_URL || ''),
+      '__BACKEND_URL__': JSON.stringify(env.VITE_API_URL || env.VITE_API_BASE_URL || ''),
     },
     server: {
       port: 3000,
