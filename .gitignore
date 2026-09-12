@@ -1,29 +1,53 @@
-# Dependencies
+# ── Dependencies ──────────────────────────────────────────────────────────────
 node_modules/
 .venv/
 venv/
 ENV/
 env/
+.env/
 
-# Build outputs
+# ── Build outputs ─────────────────────────────────────────────────────────────
 dist/
 build/
 *.egg-info/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
-# Local environment & secrets
+# ── Secrets & Environment Variables ──────────────────────────────────────────
+# ALL .env variants — never commit any of these
 .env
 .env.local
+.env.development
+.env.production
+.env.staging
+.env.test
 .env.*.local
+*.env
 
-# Temp upload files & caches
+# ── Runtime data (generated at server start) ──────────────────────────────────
 uploads/
 reports/
 *.log
-.DS_Store
 
-# IDE / System
+# ── OS / IDE artifacts ────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
 .vscode/
 .idea/
 *.swp
+*.swo
+
+# ── Python cache & testing ────────────────────────────────────────────────────
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# ── Misc scratch / temp ───────────────────────────────────────────────────────
+.freebuff/
+*.tmp
+*.bak

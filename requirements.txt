@@ -14,4 +14,5 @@ python-dotenv>=1.2.2
 tavily-python>=0.7.26
 pandas
 xlrd
-python-calamine
+pytesseract>=0.3.10
+rapidocr-onnxruntime>=1.3.0

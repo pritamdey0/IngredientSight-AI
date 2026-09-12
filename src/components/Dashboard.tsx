@@ -579,21 +579,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onBackToLanding }) => {
     : '';
 
   return (
-    <div className="relative min-h-screen bg-black text-white font-['Inter_Tight',sans-serif] font-medium tracking-[-0.04em] flex flex-col overflow-x-hidden">
+    <div className="relative min-h-screen bg-[#0a0a0a] text-white font-sans flex flex-col overflow-x-hidden">
 
-      <div className="pointer-events-none fixed inset-0 z-0">
-        <svg className="absolute inset-0 h-full w-full opacity-20">
-          <defs>
-            <pattern id="dash-grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M0 20H20M20 20V0M20 20H40M20 20V40" stroke="white" strokeOpacity="0.15" strokeWidth="0.5" />
-              <rect x="19" y="19" width="2" height="2" fill="white" fillOpacity="0.12" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#dash-grid)" />
-        </svg>
-
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[340px] bg-[radial-gradient(ellipse_at_top,rgba(59,130,246,0.18)_0%,transparent_70%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_50%,rgba(0,0,0,0.6)_100%)]" />
+      {/* Classic Ambient Glass Backdrop matching landing page */}
+      <div className="pointer-events-none fixed inset-0 z-0 bg-[#0a0a0a]">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.06)_0%,transparent_65%)]" />
+        <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-[radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.03)_0%,transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,rgba(10,10,10,0.85)_100%)]" />
       </div>
 
       <div className="relative z-10 flex flex-wrap items-center justify-between gap-2 px-6 pt-5">
@@ -682,10 +674,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onBackToLanding }) => {
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="relative rounded-3xl border border-white/8 bg-white/[0.025] overflow-hidden"
+          className="relative rounded-3xl border border-white/15 bg-white/10 backdrop-blur-md shadow-2xl overflow-hidden"
         >
           <Spotlight
-            className="from-blue-700 via-blue-500 to-transparent blur-2xl"
+            className="from-white/20 via-white/5 to-transparent blur-2xl"
             size={260}
           />
 
