@@ -17,5 +17,5 @@ services:
         value: 3.11.9
       - key: SERVER_HOST
         value: 0.0.0.0
-      - key: PORT
-        generateValue: false
+      # NOTE: Render automatically injects PORT for web services — no need
+      # to declare it here (server.py reads PORT from the environment).
