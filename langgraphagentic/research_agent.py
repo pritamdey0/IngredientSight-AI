@@ -858,7 +858,7 @@ def get_batch_research_llm():
         raise ValueError("Neither GOOGLE_API_KEY nor GEMINI_API_KEY was found in the environment/dotenv file.")
 
     llm = ChatGoogleGenerativeAI(
-        model="gemini-1.5-flash",
+        model="gemini-2.5-flash",
         google_api_key=api_key,
         temperature=0.0
     )
@@ -1125,10 +1125,20 @@ def research_node(state: dict) -> dict:
 
             for report in batch_report.reports:
                 matched_name = report.name
+                # 1) Prefer an exact match on the normalized key (safe against
+                #    substring collisions, e.g. "Sodium Hydroxide" vs
+                #    "Sodium Hydroxymethylglycinate").
+                norm_rep = _normalize_ingredient_key(report.name)
                 for ing in llm_eval_ingredients:
-                    if ing.lower() in report.name.lower() or report.name.lower() in ing.lower():
+                    if _normalize_ingredient_key(ing) == norm_rep:
                         matched_name = ing
                         break
+                else:
+                    # 2) Only then fall back to loose substring matching.
+                    for ing in llm_eval_ingredients:
+                        if ing.lower() in report.name.lower() or report.name.lower() in ing.lower():
+                            matched_name = ing
+                            break
 
                 report_dict = report.model_dump()
 

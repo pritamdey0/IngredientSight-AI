@@ -117,8 +117,8 @@ def ocr_node(state: dict) -> dict:
                 lines = [item[1] for item in result if item[1]]
                 if lines:
                     state["ocr_text"] = ", ".join(lines).strip()
-                    # elapse may be a list of per-stage times or a single float
-                    total_ms = sum(elapse) if isinstance(elapse, (list, tuple)) else elapse
+                    # elapse may be a list of per-stage times, a single float, or None
+                    total_ms = sum(elapse) if isinstance(elapse, (list, tuple)) else (elapse or 0.0)
                     print(
                         f"[INFO] RapidOCR extracted {len(lines)} text blocks "
                         f"in {total_ms:.3f}s (0 API cost)."
@@ -174,7 +174,7 @@ def ocr_node(state: dict) -> dict:
         client = get_gemini_client()
         image = Image.open(image_path)
         response = client.models.generate_content(
-            model="gemini-1.5-flash",
+            model="gemini-2.5-flash",
             contents=[_VISION_PROMPT, image],
         )
         state["ocr_text"] = response.text.strip() if response.text else ""
@@ -212,7 +212,9 @@ def ocr_node(state: dict) -> dict:
                 "Authorization": f"Bearer {groq_api_key}",
                 "Content-Type": "application/json",
             }
-            for model in ["llama-3.2-11b-vision-preview", "qwen/qwen3.6-27b"]:
+            # Current Groq vision model first; legacy Llama 3.2 preview kept
+            # as a secondary attempt in case the key still has access to it.
+            for model in ["qwen/qwen3.8-27b", "llama-3.2-11b-vision-preview"]:
                 try:
                     payload = {
                         "model": model,

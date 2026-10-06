@@ -29,8 +29,11 @@ export default defineConfig(({ mode }) => {
       console.warn(`[vite] Invalid VITE_API_URL "${apiUrl}", falling back to localhost:8000`);
     }
   } else {
-    // Development mode
-    const customPort = Number(env.VITE_BACKEND_PORT || process.env.VITE_BACKEND_PORT || 8000);
+    // Development mode — mirror server.py's port resolution so the proxy
+    // follows the backend when SERVER_PORT / PORT is set in .env.
+    const customPort = Number(
+      env.VITE_BACKEND_PORT || process.env.VITE_BACKEND_PORT || env.SERVER_PORT || env.PORT || 8000,
+    );
     const customHost = env.VITE_BACKEND_HOST || process.env.VITE_BACKEND_HOST || 'localhost';
     backendPort = customPort;
     backendHost = customHost;

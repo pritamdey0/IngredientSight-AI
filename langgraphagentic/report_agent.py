@@ -1,32 +1,11 @@
 import os
 import json
 import re
+import uuid
 from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
-
-
-def extract_safety_score(state: dict, safety_analysis: dict) -> str:
-    """
-    Extracts a numeric safety score from the state or safety analysis if available.
-    """
-    # Check for direct key in state or safety_analysis
-    score = state.get("safety_score") or safety_analysis.get("safety_score")
-    if score is not None:
-        return str(score)
-        
-    # Check if overall_score is numeric or contains a numeric score (e.g., "88/100")
-    overall_score = safety_analysis.get("overall_score", "")
-    if isinstance(overall_score, (int, float)):
-        return str(overall_score)
-        
-    # Regex search for a score
-    match = re.search(r'\b(100|[1-9]?[0-9])\b', str(overall_score))
-    if match:
-        return match.group(1)
-        
-    return None
 
 
 def determine_ingredient_risk(report: dict) -> str:
@@ -65,7 +44,10 @@ def determine_ingredient_risk(report: dict) -> str:
 
     # Avoid false positives like "no known toxicity risks" by doing smart negative keyword filtering
     def is_negated(keyword, text):
-        pattern = rf"\b(no|not|without|low|none|free of)\s+\w*\s*\b{keyword}"
+        # A negator only counts if it appears in the same clause (no sentence
+        # punctuation in between) and within a short distance before the keyword.
+        kw = re.escape(keyword).replace(r"\ ", r"[\s\-]+")
+        pattern = rf"\b(no|not|without|none|low|free of)\b[^.;:]{{0,40}}?\b{kw}\b"
         return bool(re.search(pattern, text))
 
     high_keywords = ["toxic", "carcinogen", "banned", "prohibited", "severe allergy", "sensitizer", "contact dermatitis", "hazardous", "formaldehyde"]
@@ -80,8 +62,9 @@ def determine_ingredient_risk(report: dict) -> str:
     if has_high:
         return "High Risk"
 
+    # \b(?!un)safe\b prevents "unsafe" from being counted as a safe phrase
     safe_phrases = [
-        "safe" in side_effects,
+        bool(re.search(r"\b(?!un)safe\b", side_effects)),
         "no known side effects" in side_effects,
         "none known" in side_effects,
         "generally none" in side_effects,
@@ -526,12 +509,15 @@ def report_node(state: dict) -> dict:
     os.makedirs(output_dir, exist_ok=True)
     
     safe_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # Unique suffix: two analyses finishing in the same second would otherwise
+    # overwrite each other's report files.
+    stem = f"report_{safe_timestamp}_{uuid.uuid4().hex[:6]}"
     
-    md_path = os.path.join(output_dir, f"report_{safe_timestamp}.md")
+    md_path = os.path.join(output_dir, f"{stem}.md")
     with open(md_path, "w", encoding="utf-8") as f:
         f.write(markdown_report)
         
-    json_path = os.path.join(output_dir, f"report_{safe_timestamp}.json")
+    json_path = os.path.join(output_dir, f"{stem}.json")
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(json_report, f, indent=2, ensure_ascii=False)
         

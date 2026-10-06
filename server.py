@@ -56,15 +56,25 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    # A wildcard origin cannot be combined with allow_credentials=True
+    # (browsers reject it). Use explicit dev/prod origins and no credentials.
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 REPORTS_DIR = os.path.join(BASE_DIR, "reports")
-SAMPLE_IMAGE = os.path.join(BASE_DIR, "ingredients_en.5.full.jpg")
+# NOTE: the previously bundled sample image (ingredients_en.5.full.jpg) is no
+# longer present in the repo, so the product-name-only "demo" fallback has
+# been removed — /api/analyze now requires a real uploaded label photo.
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(REPORTS_DIR, exist_ok=True)
@@ -176,14 +186,19 @@ ALLOWED_IMAGE_EXT = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"}
 
 
 @app.post("/api/analyze")
-async def analyze_label(
+def analyze_label(
     file: Optional[UploadFile] = File(None),
     product_name: Optional[str] = Form(None),
 ):
     """
     Run 5-Agent LangGraph Pipeline on an uploaded cosmetic label image.
 
-    - `file`:         (optional) the uploaded product-label image.
+    Declared as a plain `def` (not `async def`) on purpose: the LangGraph
+    pipeline is fully synchronous and can take minutes. FastAPI runs `def`
+    routes in a threadpool, so the event loop stays responsive to health
+    checks and other requests while an analysis is running.
+
+    - `file`:         (required) the uploaded product-label image.
     - `product_name`: (optional) display name for the analyzed product.
     """
     _require_pipeline()
@@ -205,7 +220,9 @@ async def analyze_label(
             file_name = f"upload_{uuid.uuid4().hex[:12]}{file_ext}"
             file_path = os.path.join(UPLOAD_DIR, file_name)
 
-            content = await file.read()
+            # Synchronous read — this route runs in FastAPI's threadpool
+            # (plain `def`), so awaiting is not available here.
+            content = file.file.read()
             if len(content) == 0:
                 raise HTTPException(
                     status_code=400,
@@ -219,39 +236,18 @@ async def analyze_label(
 
             default_name = os.path.splitext(safe_name)[0]
         else:
-            # CRITICAL FIX: previously we silently fell back to the bundled
-            # "ingredients_en.5.full.jpg" sample image here. That meant every
-            # time a user typed a product name (instead of uploading a real
-            # photo), the server analysed the *same* shampoo ingredients list
-            # — producing identical "demo output" for every possible query.
-            #
-            # That fallback was indistinguishable from a "working" analysis
-            # and made the dashboard appear broken. We now return an
-            # explicit 400 that clearly explains what the user must do.
-            if not product_name or not product_name.strip():
-                raise HTTPException(
-                    status_code=400,
-                    detail=(
-                        "No product label image was uploaded. "
-                        "Please take or upload a clear photo of the product's "
-                        "ingredient list panel so the AI can read it."
-                    ),
-                )
-
-            if not os.path.exists(SAMPLE_IMAGE):
-                raise HTTPException(
-                    status_code=400,
-                    detail=(
-                        "No image was uploaded and the bundled sample image "
-                        "is missing. Please upload a real product-label photo."
-                    ),
-                )
-
-            file_path = SAMPLE_IMAGE
-            default_name = product_name.strip()
-            print(
-                f"[WARN] No image uploaded for product '{default_name}' — "
-                "using bundled sample ingredients image (demo-mode result)."
+            # A real product-label image is required. The old behaviour of
+            # silently analysing a bundled sample image produced identical
+            # "demo" output for every query and made the dashboard appear
+            # broken; the sample file itself has also been removed from the
+            # repo, so any fallback here would fail with a confusing 500.
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "No product label image was uploaded. "
+                    "Please take or upload a clear photo of the product's "
+                    "ingredient list panel so the AI can read it."
+                ),
             )
 
         display_name = (product_name or default_name).strip() or default_name
@@ -276,7 +272,6 @@ async def analyze_label(
             "report_md_path": result.get("report_md_path", ""),
             "report_json_path": result.get("report_json_path", ""),
             "source_image_path": file_path,
-            "sample_image_used": os.path.abspath(file_path) == os.path.abspath(SAMPLE_IMAGE),
         }
     except HTTPException:
         raise

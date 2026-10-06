@@ -23,4 +23,6 @@ dependencies = [
     "pandas",
     "xlrd",
     "python-calamine",
+    "pytesseract>=0.3.10",
+    "rapidocr-onnxruntime>=1.1.0",
 ]
