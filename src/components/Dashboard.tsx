@@ -371,54 +371,63 @@ export const Dashboard: React.FC<DashboardProps> = ({ onBackToLanding }) => {
 
   const checkHealth = useCallback(async () => {
     setHealth((h) => ({ ...h, loading: true }));
-    const controller = new AbortController();
-    const to = setTimeout(() => controller.abort(), 6000);
-    try {
-      const res = await fetch(getApiUrl('/api/health'), {
+
+    const once = (timeoutMs: number) => {
+      const controller = new AbortController();
+      const to = setTimeout(() => controller.abort(), timeoutMs);
+      return fetch(getApiUrl('/api/health'), {
         method: 'GET',
         signal: controller.signal,
         headers: { Accept: 'application/json' },
-      });
-      clearTimeout(to);
+      }).finally(() => clearTimeout(to));
+    };
 
-      if (res.ok) {
-        const data = (await res.json()) as BackendHealth & {
-          gemini_configured?: boolean;
-          tavily_configured?: boolean;
-          port?: number;
-          host?: string;
-        };
-        setHealth({
-          loading: false,
-          reachable: true,
-          status: (data.status as 'ok' | 'degraded') || 'ok',
-          gemini: typeof data.gemini_configured === 'boolean' ? data.gemini_configured : data.gemini,
-          tavily: typeof data.tavily_configured === 'boolean' ? data.tavily_configured : data.tavily,
-          port: typeof data.port === 'number' ? data.port : undefined,
-          host: typeof data.host === 'string' ? data.host : undefined,
-          lastChecked: Date.now(),
-        });
-      } else {
-        setHealth({
-          loading: false,
-          reachable: false,
-          message: `Health check returned status ${res.status}`,
-          lastChecked: Date.now(),
-        });
+    // Render free tier sleeps after ~15 min of inactivity; the first request
+    // can take 60-90s while the instance cold-boots. Retry patiently with a
+    // "waking up" message instead of declaring the backend dead after 6s.
+    const attempts = 8;
+    let lastMsg = 'Network error';
+
+    for (let i = 0; i < attempts; i++) {
+      try {
+        const res = await once(i === 0 ? 20000 : 15000);
+
+        if (res.ok) {
+          const data = (await res.json()) as BackendHealth & {
+            gemini_configured?: boolean;
+            tavily_configured?: boolean;
+            port?: number;
+            host?: string;
+          };
+          setHealth({
+            loading: false,
+            reachable: true,
+            status: (data.status as 'ok' | 'degraded') || 'ok',
+            gemini: typeof data.gemini_configured === 'boolean' ? data.gemini_configured : data.gemini,
+            tavily: typeof data.tavily_configured === 'boolean' ? data.tavily_configured : data.tavily,
+            port: typeof data.port === 'number' ? data.port : undefined,
+            host: typeof data.host === 'string' ? data.host : undefined,
+            lastChecked: Date.now(),
+          });
+          return;
+        }
+        lastMsg = `Health check returned status ${res.status}`;
+      } catch (err) {
+        lastMsg =
+          (err as Error)?.name === 'AbortError'
+            ? 'Waking up backend (free tier cold start)…'
+            : (err as Error)?.message || 'Network error';
+        setHealth((h) => ({ ...h, loading: true, message: lastMsg }));
       }
-    } catch (err) {
-      clearTimeout(to);
-      const msg =
-        (err as Error)?.name === 'AbortError'
-          ? 'Connection timed out'
-          : (err as Error)?.message || 'Network error';
-      setHealth({
-        loading: false,
-        reachable: false,
-        message: msg,
-        lastChecked: Date.now(),
-      });
+      await new Promise((r) => setTimeout(r, 5000));
     }
+
+    setHealth({
+      loading: false,
+      reachable: false,
+      message: lastMsg,
+      lastChecked: Date.now(),
+    });
   }, []);
 
   useEffect(() => {
