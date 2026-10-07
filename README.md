@@ -403,11 +403,6 @@ Returns the current health and configuration status of the backend pipeline.
 
 This project is deployed **free** with a split architecture: the React frontend lives on **Vercel**, and the FastAPI + LangGraph backend lives on **Render** (Vercel's free tier cannot host Python services).
 
-```
- Vercel (frontend, auto-deploys on every git push)        Render (backend, free Web Service)
- ingredient-sight-ai.vercel.app      ── REST (HTTPS) ──▶  ingredientsight-ai.onrender.com
-```
-
 ### Backend — Render (free tier)
 
 1. Create a **New Web Service** from the GitHub repo (`pritamdey0/IngredientSight-AI`)
@@ -427,7 +422,7 @@ This project is deployed **free** with a split architecture: the React frontend 
 ### Frontend — Vercel
 
 1. Import the same GitHub repo in Vercel — deploys **auto-trigger on every push to `main`**
-2. Add the environment variable **`VITE_API_URL = https://ingredientsight-ai.onrender.com`** (this is baked into the build by `vite.config.ts` via `__BACKEND_URL__`)
+2. Add the environment variable **`VITE_API_URL = your_backend_url`** (this is baked into the build by `vite.config.ts` via `__BACKEND_URL__`)
 3. Framework preset: **Vite** · Build: `npm run build` · Output: `dist`
 4. ⚠️ If you change `VITE_API_URL`, you must **redeploy** for it to take effect — it is read at build time, not runtime
 
