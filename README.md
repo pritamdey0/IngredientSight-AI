@@ -27,6 +27,9 @@
 > **Upload a product label → 5 AI Agents analyze it → Get a full dermatological safety report.**  
 > A full-stack AI application combining a cinematic editorial landing page with a live multi-agent analysis dashboard.
 
+> 🌐 **Live App:** [https://ingredient-sight-ai.vercel.app](https://ingredient-sight-ai.vercel.app)  
+> ⚙️ **Live API:** [https://ingredientsight-ai.onrender.com](https://ingredientsight-ai.onrender.com) · [Swagger Docs](https://ingredientsight-ai.onrender.com/docs)
+
 <br/>
 
 ---
@@ -129,6 +132,7 @@ The project opens with a cinematic landing page featuring a full-screen atmosphe
 | **OCR — Secondary** | pytesseract | Tesseract wrapper — gracefully skipped if binary absent |
 | **Vision AI — Fallback** | Google Gemini Vision | API-based OCR — only invoked when local engines fail |
 | **Vision AI — Last Resort** | Groq Vision API | Final API fallback using `GROQ_API_KEY` |
+| **LLM (Agents)** | Google Gemini 2.5 Flash | Powers Ingredient, Research & Safety agent reasoning |
 | **Web Research** | Tavily Search API | Real-time ingredient evidence gathering |
 | **Python Runtime** | Python 3.11+ | Tested on CPython 3.11 and 3.12 |
 
@@ -398,12 +402,52 @@ Returns the current health and configuration status of the backend pipeline.
 
 ---
 
+## 🚢 Production Deployment (Vercel + Render)
+
+This project is deployed **free** with a split architecture: the React frontend lives on **Vercel**, and the FastAPI + LangGraph backend lives on **Render** (Vercel's free tier cannot host Python services).
+
+```
+ Vercel (frontend, auto-deploys on every git push)        Render (backend, free Web Service)
+ ingredient-sight-ai.vercel.app      ── REST (HTTPS) ──▶  ingredientsight-ai.onrender.com
+```
+
+### Backend — Render (free tier)
+
+1. Create a **New Web Service** from the GitHub repo (`pritamdey0/IngredientSight-AI`)
+2. Configure:
+   | Setting | Value |
+   |---------|-------|
+   | Environment | `Python 3` |
+   | Build Command | `pip install -r requirements.txt` |
+   | Start Command | `python server.py` |
+   | Instance Type | `Free` |
+3. Add environment variables: `GEMINI_API_KEY`, `GOOGLE_API_KEY`, `TAVILY_API_KEY`, `GROQ_API_KEY` (all **Secret**), plus `PYTHON_VERSION=3.11.9`
+4. In **Settings**, set **Health Check Path** to `/api/health`
+5. Do **not** set `PORT` — Render injects it automatically and `server.py` reads it
+
+> ℹ️ The free tier sleeps after ~15 minutes of inactivity. The dashboard handles this gracefully: it retries the health check for up to ~2 minutes showing *"Waking up backend (free tier cold start)…"* while Render boots (60–90 s). Analyses take 2–4 minutes on the free 0.1 CPU instance.
+
+### Frontend — Vercel
+
+1. Import the same GitHub repo in Vercel — deploys **auto-trigger on every push to `main`**
+2. Add the environment variable **`VITE_API_URL = https://ingredientsight-ai.onrender.com`** (this is baked into the build by `vite.config.ts` via `__BACKEND_URL__`)
+3. Framework preset: **Vite** · Build: `npm run build` · Output: `dist`
+4. ⚠️ If you change `VITE_API_URL`, you must **redeploy** for it to take effect — it is read at build time, not runtime
+
+### Local ↔ Cloud development
+
+`vite.config.ts` proxies `/api/*` to the local backend during development, following `SERVER_PORT`/`PORT` from your `.env` (default `8000`). With `VITE_API_URL` unset locally, the app talks to your own `python server.py`.
+
+<br/>
+
+---
+
 ## 🛡️ Security Notes
 
 - Uploaded files are validated against **image magic bytes** (not just file extensions) — spoofed file types are rejected before OCR ever runs
 - The `.env` file is **gitignored** — your API keys are never committed to version control
 - **If any key was ever accidentally committed**, rotate it immediately at the provider's console and generate a fresh one. You should also purge it from git history using `git filter-branch` or `git-filter-repo`
-- CORS is wide-open (`allow_origins=["*"]`) for local development; restrict `allow_origins` to your frontend domain before any production deployment
+- CORS is restricted to explicit origins: local dev (`localhost:3000` / `localhost:5173`) plus any `*.vercel.app` deployment — with credentials disabled per the CORS spec
 - All uploaded files are stored with a random UUID prefix — filenames cannot be predicted or enumerated
 
 <br/>
@@ -411,6 +455,31 @@ Returns the current health and configuration status of the backend pipeline.
 ---
 
 ## 📝 Changelog
+
+### v1.2.0 — Production Deployment + Reliability Hardening
+
+**☁️ Deployment (Vercel + Render, free tier)**
+- 🚀 Backend deployed to Render as a free Web Service; frontend to Vercel with GitHub auto-deploy on every push
+- 📄 `render.yaml` fixed — removed invalid `PORT` env-var declaration (`generateValue` is not a valid blueprint key; Render injects `PORT` automatically)
+- 🔧 `vite.config.ts` dev proxy now follows `SERVER_PORT`/`PORT` from `.env` instead of hard-coding `8000`
+
+**🐛 Bug Fixes**
+- 🆙 All Gemini calls migrated from retired `gemini-1.5-flash` → `gemini-2.5-flash` (the old model ID had been fully retired, breaking every agent)
+- 🆙 Groq vision fallback updated to the current `qwen/qwen3.8-27b` model (`llama-3.2-11b-vision-preview` deprecated)
+- 🐛 Fixed `ocr_agent.py` crash when RapidOCR returns a scalar elapsed time instead of a list
+- ⚡ `/api/analyze` converted to a sync route so multi-minute pipeline runs execute in Starlette's threadpool instead of blocking the event loop (dashboard health checks no longer freeze during analysis)
+- 🧴 Removed the dead `SAMPLE_IMAGE` fallback — requests without a real label image now fail fast with a clear HTTP 400 instead of silently analyzing a bundled sample
+- 🛡️ CORS hardened: explicit origins + `*.vercel.app` regex, `allow_credentials` disabled (wildcard + credentials is invalid per spec and was silently rejecting browser requests)
+- 🧪 Research Agent now matches OCR'd ingredients with normalized exact-first lookup (no more `Aqua` fetching research for `Aquaphthalmica` via loose substring collisions)
+- 🩺 Safety Agent negation regex tightened (`no parabens …` no longer flags parabens); `\b(?!un)safe\b` prevents "unsafe"/"unsafe" misclassification
+- 📁 Report filenames include a short UUID suffix — concurrent same-second analyses can no longer overwrite each other's files
+- 🧹 Deleted dead `extract_safety_score()` (never called, crashed on `None` responses)
+- 🧩 `pytesseract` and `rapidocr-onnxruntime` added to `pyproject.toml` (previously only in `requirements.txt`)
+- 📝 `.env.example` invalid box-drawing separator lines replaced with proper `#` comments (they were parsed as bogus key/value pairs by `python-dotenv`)
+
+**💚 Cold-start resilience (Render free tier)**
+- 🔄 Dashboard health check is now a patient retry loop (up to ~2 min) showing *"Waking up backend (free tier cold start)…"* instead of a false "Backend not connected" after 6 s
+- 🧪 Frontend now fails fast with a clear message if no file is attached, instead of sending a doomed `FormData`
 
 ### v1.1.0 — Local-First OCR + Cinematic Landing Page
 
