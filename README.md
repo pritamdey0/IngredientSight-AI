@@ -27,9 +27,6 @@
 > **Upload a product label → 5 AI Agents analyze it → Get a full dermatological safety report.**  
 > A full-stack AI application combining a cinematic editorial landing page with a live multi-agent analysis dashboard.
 
-> 🌐 **Live App:** [https://ingredient-sight-ai.vercel.app](https://ingredient-sight-ai.vercel.app)  
-> ⚙️ **Live API:** [https://ingredientsight-ai.onrender.com](https://ingredientsight-ai.onrender.com) · [Swagger Docs](https://ingredientsight-ai.onrender.com/docs)
-
 <br/>
 
 ---
