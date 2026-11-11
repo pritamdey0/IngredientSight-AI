@@ -1,46 +1,51 @@
-// TextRoll – letter-by-letter roll-in animation (Motion Primitives style)
-import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+/**
+ * Dependency-free TextRoll: each character rises into place on mount.
+ *
+ * The animation lives in `.roll-char` in `src/index.css` so it also honours
+ * `prefers-reduced-motion`. The element that owns the text must carry the real
+ * label (`aria-label`), because these spans are decorative.
+ */
 
-interface TextRollProps {
+import React from 'react';
+
+export interface TextRollProps {
   children: string;
   className?: string;
-  duration?: number;
-  staggerDelay?: number;
+  delayMs?: number;
+  staggerMs?: number;
 }
 
 export const TextRoll: React.FC<TextRollProps> = ({
   children,
   className = '',
-  duration = 0.5,
-  staggerDelay = 0.04,
+  delayMs = 0,
+  staggerMs = 26,
 }) => {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setVisible(true), 80);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const letters = children.split('');
+  let cursor = 0;
 
   return (
-    <span className={`inline-flex overflow-hidden ${className}`} aria-label={children}>
-      {letters.map((char, i) => (
-        <motion.span
-          key={i}
-          initial={{ opacity: 0, y: 40, rotateX: -60 }}
-          animate={visible ? { opacity: 1, y: 0, rotateX: 0 } : {}}
-          transition={{
-            duration,
-            delay: i * staggerDelay,
-            ease: [0.22, 1, 0.36, 1],
-          }}
-          style={{ display: char === ' ' ? 'inline' : 'inline-block', transformOrigin: 'bottom' }}
-        >
-          {char === ' ' ? '\u00A0' : char}
-        </motion.span>
-      ))}
+    <span className={`inline-block ${className}`} aria-hidden="true">
+      {children.split(' ').map((word, wordIndex, words) => {
+        const characters = Array.from(word).map((character, index) => (
+          <span
+            key={`${character}-${index}`}
+            className="roll-char"
+            style={{ animationDelay: `${delayMs + (cursor + index) * staggerMs}ms` }}
+          >
+            {character}
+          </span>
+        ));
+        cursor += word.length;
+
+        return (
+          <React.Fragment key={`${word}-${wordIndex}`}>
+            <span className="inline-block whitespace-nowrap">{characters}</span>
+            {wordIndex < words.length - 1 ? ' ' : null}
+          </React.Fragment>
+        );
+      })}
     </span>
   );
 };
+
+export default TextRoll;

@@ -4,10 +4,10 @@ import { ScrollVideoBackground } from './ScrollVideoBackground';
 import { Reveal } from './Reveal';
 
 interface NovaLandingPageProps {
-  onOpenDashboard: () => void;
+  onOpenAnalyzer: () => void;
 }
 
-export const NovaLandingPage: React.FC<NovaLandingPageProps> = ({ onOpenDashboard }) => {
+export const NovaLandingPage: React.FC<NovaLandingPageProps> = ({ onOpenAnalyzer }) => {
   return (
     <div className="relative min-h-screen bg-[#0a0a0a] text-white selection:bg-white/20 selection:text-white font-sans overflow-x-hidden">
       {/* Scroll Video Background (Fixed z-0) */}
@@ -41,17 +41,17 @@ export const NovaLandingPage: React.FC<NovaLandingPageProps> = ({ onOpenDashboar
               <div className="flex flex-col gap-2">
                 <Reveal delayMs={150}>
                   <div className="font-mono text-xs uppercase tracking-[0.15em] text-white/90 drop-shadow-md">
-                    / INCI MOLECULAR OCR
+                    / INCI LIST + LABEL OCR
                   </div>
                 </Reveal>
                 <Reveal delayMs={270}>
                   <div className="font-mono text-xs uppercase tracking-[0.15em] text-white/90 drop-shadow-md">
-                    / TOXICOLOGICAL RISK MATRIX
+                    / EU COSING ANNEX LOOKUP
                   </div>
                 </Reveal>
                 <Reveal delayMs={390}>
                   <div className="font-mono text-xs uppercase tracking-[0.15em] text-white/90 drop-shadow-md">
-                    / AUTONOMOUS RESEARCH AGENTS
+                    / ECHA CLP HAZARD CODES
                   </div>
                 </Reveal>
               </div>
@@ -59,7 +59,8 @@ export const NovaLandingPage: React.FC<NovaLandingPageProps> = ({ onOpenDashboar
               {/* Right Intro Copy */}
               <Reveal delayMs={300} className="max-w-sm sm:text-right">
                 <p className="text-lg sm:text-xl leading-relaxed text-white drop-shadow-md font-sans">
-                  We synthesize real-time scientific literature, FDA monographs, and EWG safety indices to bring total clarity to cosmetic formulation safety.
+                  Every name on the label, checked against the official EU annexes and ECHA CLP
+                  classifications, with the source printed next to each fact.
                 </p>
               </Reveal>
             </div>
@@ -72,7 +73,7 @@ export const NovaLandingPage: React.FC<NovaLandingPageProps> = ({ onOpenDashboar
                 <Reveal delayMs={150}>
                   <div className="inline-block border-l-2 border-white bg-white/15 px-3 py-1.5 backdrop-blur-md mb-5">
                     <span className="font-mono text-[11px] uppercase tracking-[0.15em] text-white">
-                      MOLECULAR SAFETY ENGINE
+                      REGULATORY LOOKUP ENGINE
                     </span>
                   </div>
                 </Reveal>
@@ -80,9 +81,9 @@ export const NovaLandingPage: React.FC<NovaLandingPageProps> = ({ onOpenDashboar
                 {/* H1 Headline */}
                 <Reveal delayMs={280}>
                   <h1 className="text-5xl sm:text-6xl lg:text-7xl font-normal leading-[1.05] tracking-tight text-white drop-shadow-lg max-w-2xl">
-                    Pure. Transparent.
+                    Sourced. Cited.
                     <br />
-                    Scientifically Proven.
+                    Not Scored.
                   </h1>
                 </Reveal>
               </div>
@@ -100,7 +101,7 @@ export const NovaLandingPage: React.FC<NovaLandingPageProps> = ({ onOpenDashboar
               <Reveal delayMs={120}>
                 <div className="inline-block border-l-2 border-white bg-white/15 px-3 py-1.5 backdrop-blur-md">
                   <span className="font-mono text-[11px] uppercase tracking-[0.15em] text-white">
-                    MOLECULAR INTELLIGENCE ON DEMAND
+                    WHAT THE DATASET SAYS, NOTHING MORE
                   </span>
                 </div>
               </Reveal>
@@ -108,7 +109,8 @@ export const NovaLandingPage: React.FC<NovaLandingPageProps> = ({ onOpenDashboar
               {/* Right Copy */}
               <Reveal delayMs={220} className="max-w-sm sm:text-right">
                 <p className="text-lg sm:text-xl leading-relaxed text-white drop-shadow-md">
-                  Our multi-agent pipeline doesn't just list ingredients — it extracts, evaluates, and synthesizes complete toxicological safety profiles.
+                  One deterministic lookup per ingredient. No risk score, no grade, and the same
+                  result every time you run it.
                 </p>
               </Reveal>
             </div>
@@ -120,16 +122,18 @@ export const NovaLandingPage: React.FC<NovaLandingPageProps> = ({ onOpenDashboar
                 {/* H2 Headline */}
                 <Reveal delayMs={180}>
                   <h2 className="text-5xl sm:text-6xl lg:text-7xl font-normal leading-[1.05] tracking-tight text-white drop-shadow-lg">
-                    Analyze formulations
+                    Check a label
                     <br />
-                    with evidence.
+                    in seconds.
                   </h2>
                 </Reveal>
 
                 {/* Body */}
                 <Reveal delayMs={320}>
                   <p className="mt-6 max-w-md text-sm sm:text-base text-white/80 drop-shadow-md leading-relaxed">
-                    From raw label images to comprehensive toxicity reports, IngredientSight AI synthesizes PubMed literature and CIR safety monographs in real time.
+                    Paste the INCI list or photograph the pack. Each name is matched to its annex
+                    entry, concentration limit and CLP hazard codes, or plainly marked as having no
+                    data in the dataset.
                   </p>
                 </Reveal>
 
@@ -137,10 +141,10 @@ export const NovaLandingPage: React.FC<NovaLandingPageProps> = ({ onOpenDashboar
                 <Reveal delayMs={420}>
                   <div className="mt-8 flex flex-wrap gap-3">
                     <button
-                      onClick={onOpenDashboard}
+                      onClick={onOpenAnalyzer}
                       className="rounded-full border border-white/25 bg-white/10 backdrop-blur-md px-6 py-3 text-xs sm:text-sm font-medium text-white hover:bg-white/20 transition-colors cursor-pointer shadow-lg"
                     >
-                      Get Started
+                      Check an ingredient list
                     </button>
                   </div>
                 </Reveal>
@@ -160,12 +164,13 @@ export const NovaLandingPage: React.FC<NovaLandingPageProps> = ({ onOpenDashboar
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <h3 className="text-base sm:text-lg font-medium text-white">
-                          Optical Label OCR
+                          Label photo OCR
                         </h3>
 
                       </div>
                       <p className="mt-1.5 text-sm leading-relaxed text-white/70">
-                        Extracts INCI ingredient labels instantly from cosmetic packaging photos using high-density neural recognition.
+                        Local text recognition turns a photo of the ingredient panel into a list you
+                        can correct before anything is checked.
                       </p>
                     </div>
                   </div>
@@ -183,12 +188,13 @@ export const NovaLandingPage: React.FC<NovaLandingPageProps> = ({ onOpenDashboar
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <h3 className="text-base sm:text-lg font-medium text-white">
-                          Toxicological Mapping
+                          Annex status per name
                         </h3>
 
                       </div>
                       <p className="mt-1.5 text-sm leading-relaxed text-white/70">
-                        Calculates dermal risk indices, EWG hazard score approximations, and allergen flags across formulas.
+                        Prohibited, restricted, on a positive list, no annex entry found or not
+                        identified, taken straight from the CosIng annex columns.
                       </p>
                     </div>
                   </div>
@@ -206,12 +212,13 @@ export const NovaLandingPage: React.FC<NovaLandingPageProps> = ({ onOpenDashboar
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <h3 className="text-base sm:text-lg font-medium text-white">
-                          Scientific Synthesis
+                          Every fact has a source
                         </h3>
 
                       </div>
                       <p className="mt-1.5 text-sm leading-relaxed text-white/70">
-                        Cross-references PubMed, FDA monographs, and CIR panels to generate evidence-backed safety audits.
+                        Limits, CMR categories and CLP codes are printed with the annex entry and
+                        dataset snapshot they came from. Optional web context stays separate.
                       </p>
                     </div>
                   </div>

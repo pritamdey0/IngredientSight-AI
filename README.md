@@ -19,13 +19,12 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![LangGraph](https://img.shields.io/badge/LangGraph-Agentic%20Pipeline-FF6B35?style=for-the-badge&logo=langchain&logoColor=white)](https://langchain-ai.github.io/langgraph/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-F7DC6F?style=for-the-badge)](./LICENSE)
 
 <br/>
 
-> **Upload a product label → 5 AI Agents analyze it → Get a full dermatological safety report.**  
-> A full-stack AI application combining a cinematic editorial landing page with a live multi-agent analysis dashboard.
+> **Upload a product label → AI & Regulatory Engine analyzes it → Get a full cosmetic safety report.**  
+> A full-stack AI application combining a cinematic editorial landing page with an automated ingredient analysis dashboard.
 
 <br/>
 
@@ -35,9 +34,9 @@
 
 ## 🧬 What is IngredientSight AI?
 
-**IngredientSight AI** is a full-stack intelligent system that decodes the ingredient labels of cosmetic and skincare products using a **5-stage autonomous AI pipeline** built with [LangGraph](https://langchain-ai.github.io/langgraph/). Simply photograph your product label, upload it to the dashboard, and receive a comprehensive, research-backed safety report — complete with a dermatological risk score, per-ingredient profiles, health warnings, and downloadable reports.
+**IngredientSight AI** is a full-stack intelligent system that decodes the ingredient labels of cosmetic and skincare products using **RapidOCR**, **EU CosIng regulatory annexes**, **ECHA CLP hazard classifications**, and **Tavily web context**. Photograph your product label, drop it into the dashboard, and receive an authentic, source-backed safety report — with per-ingredient regulatory status, CMR categories, fragrance allergens, and verified scientific references.
 
-The project opens with a cinematic landing page featuring a full-screen atmospheric hero, glassmorphic navigation, scroll-reveal feature panels, and a `Get Started` CTA that transitions into the live AI analysis dashboard.
+The project opens with a cinematic landing page featuring a full-screen atmospheric hero, glassmorphic navigation, scroll-reveal feature panels, and an intuitive transition into the live analysis dashboard.
 
 <br/>
 
@@ -45,13 +44,13 @@ The project opens with a cinematic landing page featuring a full-screen atmosphe
 
 ## ✨ Feature Highlights
 
-| 🧠 5-Agent AI Pipeline | 🎨 Premium Frontend |
+| 🧠 Intelligent Analysis Pipeline | 🎨 Premium Frontend |
 |---|---|
-| **OCR Agent** — Local-first extraction: RapidOCR (ONNX) → pytesseract → Gemini Vision fallback | **Cinematic Landing Page** with full-screen atmospheric hero and glassmorphic nav |
-| **Ingredient Agent** — Parses and normalizes INCI ingredient lists | **Scroll-Reveal Feature Cards** with staggered Framer Motion entrance animations |
-| **Research Agent** — Pulls clinical evidence via Tavily web search | **GSAP 3 + Framer Motion** scroll physics & micro-interactions |
-| **Safety Agent** — Scores ingredients, flags allergens & irritants | **`mix-blend-mode: exclusion`** typography overlays for editorial feel |
-| **Report Agent** — Generates `.md` + `.json` safety reports | **Realtime Pipeline Visualizer** showing each agent's live execution state |
+| **RapidOCR Engine** — Local ONNX text extraction: zero API quota, instant label recognition | **Cinematic Landing Page** with full-screen atmospheric hero and glassmorphic nav |
+| **INCI Ingredient Parser** — Normalizes, cleanses, and tokenizes complex ingredient labels | **Drop Image Dashboard** with fully transparent backdrop & subtle glow |
+| **CosIng & CLP Regulatory Lookup** — Deterministic EU Annex matching (prohibited, restricted, positive list) | **Framer Motion Micro-interactions** with smooth transitions and status states |
+| **Research Context** — Verbatim scientific excerpts from SCCS, CIR & PubChem via Tavily | **Editorial Typography** with crisp monochrome aesthetics & clean hierarchy |
+| **LLM Synthesis** — Plain-language summary powered by Google Gemini or Groq | **Live Re-checking** with per-ingredient manual corrections in the report sheet |
 
 <br/>
 
@@ -61,53 +60,44 @@ The project opens with a cinematic landing page featuring a full-screen atmosphe
 
 ```
                 ┌─────────────────────────────────────┐
-                │         React 19  Frontend           │
-                │   Vite 6 · TypeScript · Tailwind v4  │
-                │    GSAP 3 · Framer Motion · Lucide    │
-                └────────────────┬────────────────────-┘
+                │         React 19 Frontend           │
+                │   Vite 6 · TypeScript · Tailwind v4 │
+                │        Framer Motion · Lucide       │
+                └────────────────┬────────────────────┘
                                  │  REST API (HTTP)
-                ┌────────────────▼────────────────────-┐
-                │       FastAPI Backend  (Python)        │
-                │    POST /api/analyze · GET /api/health │
-                └────────────────┬────────────────────-┘
+                ┌────────────────▼────────────────────┐
+                │       FastAPI Backend (Python)      │
+                │  POST /api/analyze-image · /health  │
+                └────────────────┬────────────────────┘
                                  │
-                ┌────────────────▼────────────────────-┐
-                │      LangGraph  StateGraph Pipeline    │
-                │                                       │
-                │  ┌──────────────────────────────┐    │
-                │  │           START              │    │
-                │  └──────────────┬───────────────┘    │
-                │                 │                     │
-                │  ┌──────────────▼───────────────┐    │
-                │  │  🔍  OCR Agent               │    │
-                │  │  RapidOCR → pytesseract      │    │
-                │  │  → Gemini Vision (fallback)   │    │
-                │  └──────────────┬───────────────┘    │
-                │            ocr_text                   │
-                │  ┌──────────────▼───────────────┐    │
-                │  │  🧪  Ingredient Agent         │    │
-                │  │      INCI List Parser         │    │
-                │  └──────────────┬───────────────┘    │
-                │            ingredients[ ]             │
-                │  ┌──────────────▼───────────────┐    │
-                │  │  🔬  Research Agent           │    │
-                │  │      Tavily Web Search        │    │
-                │  └──────────────┬───────────────┘    │
-                │            research_results{}         │
-                │  ┌──────────────▼───────────────┐    │
-                │  │  🛡️  Safety Agent             │    │
-                │  │      Risk Scoring Engine      │    │
-                │  └──────────────┬───────────────┘    │
-                │         safety_score · risk_label     │
-                │  ┌──────────────▼───────────────┐    │
-                │  │  📋  Report Agent             │    │
-                │  │      .md + .json Generator    │    │
-                │  └──────────────┬───────────────┘    │
-                │                 │                     │
-                │  ┌──────────────▼───────────────┐    │
-                │  │            END               │    │
-                │  └──────────────────────────────┘    │
-                └───────────────────────────────────────┘
+                ┌────────────────▼────────────────────┐
+                │          Analysis Pipeline          │
+                │                                     │
+                │  ┌──────────────────────────────┐   │
+                │  │  🔍  RapidOCR (Local ONNX)   │   │
+                │  │      Extracts text from pic  │   │
+                │  └──────────────┬───────────────┘   │
+                │            ocr_text                 │
+                │  ┌──────────────▼───────────────┐   │
+                │  │  🧪  INCI Parser & Matcher   │   │
+                │  │      RapidFuzz + CosIng DB   │   │
+                │  └──────────────┬───────────────┘   │
+                │            ingredients[ ]           │
+                │  ┌──────────────▼───────────────┐   │
+                │  │  🔬  Tavily Research Context │   │
+                │  │      Scientific sources      │   │
+                │  └──────────────┬───────────────┘   │
+                │            evidence & clips         │
+                │  ┌──────────────▼───────────────┐   │
+                │  │  🛡️  Regulatory Rules Engine │   │
+                │  │      Annex II/III + CLP H-cds│   │
+                │  └──────────────┬───────────────┘   │
+                │            status & hazard flags    │
+                │  ┌──────────────▼───────────────┐   │
+                │  │  📋  LLM Summary (Gemini/Groq│   │
+                │  │      Markdown + JSON Output  │   │
+                │  └──────────────────────────────┘   │
+                └─────────────────────────────────────┘
 ```
 
 <br/>
@@ -119,19 +109,16 @@ The project opens with a cinematic landing page featuring a full-screen atmosphe
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
 | **Frontend Framework** | React 19 + TypeScript | Component-based reactive UI |
-| **Build Tool** | Vite 6 | Lightning-fast dev server & HMR |
-| **Styling** | Tailwind CSS v4 | Utility-first design system |
-| **Animation** | GSAP 3 + Framer Motion | Scroll physics & micro-interactions |
-| **Icons** | Lucide React | Crisp, consistent SVG icon library |
-| **Backend Framework** | FastAPI | High-performance async REST API |
-| **AI Orchestration** | LangGraph (StateGraph) | Multi-agent pipeline with typed state |
-| **OCR — Primary** | RapidOCR (`rapidocr-onnxruntime`) | Local ONNX engine — zero API quota, no system binary |
-| **OCR — Secondary** | pytesseract | Tesseract wrapper — gracefully skipped if binary absent |
-| **Vision AI — Fallback** | Google Gemini Vision | API-based OCR — only invoked when local engines fail |
-| **Vision AI — Last Resort** | Groq Vision API | Final API fallback using `GROQ_API_KEY` |
-| **LLM (Agents)** | Google Gemini 2.5 Flash | Powers Ingredient, Research & Safety agent reasoning |
-| **Web Research** | Tavily Search API | Real-time ingredient evidence gathering |
-| **Python Runtime** | Python 3.11+ | Tested on CPython 3.11 and 3.12 |
+| **Build Tool** | Vite 6 | Fast local development server & HMR |
+| **Styling** | Tailwind CSS v4 | Clean utility-first design system |
+| **Animation** | Framer Motion | Smooth interaction animations & drag-and-drop feedback |
+| **Icons** | Lucide React | Crisp, consistent SVG icons |
+| **Backend Framework** | FastAPI | High-performance Python async REST API |
+| **OCR Engine** | RapidOCR (`rapidocr-onnxruntime`) | Local ONNX engine — zero external API quota, runs entirely on device |
+| **Regulatory Dataset** | EU CosIng + ECHA CLP | 4,700+ curated records covering cosmetics prohibitions, limits, and hazards |
+| **LLM Reasoning** | Google Gemini / Groq | Rephrases structured findings into plain-language summaries |
+| **Web Research** | Tavily Search API | Real-time scientific evidence gathering for cosmetic ingredients |
+| **Python Runtime** | Python 3.11+ | Tested on Python 3.11 and 3.12 |
 
 <br/>
 
@@ -143,7 +130,7 @@ The project opens with a cinematic landing page featuring a full-screen atmosphe
 
 | Requirement | Minimum Version | Download |
 |-------------|----------------|----------|
-| **Node.js** | v18 or v24+ | [nodejs.org](https://nodejs.org/) |
+| **Node.js** | v18+ | [nodejs.org](https://nodejs.org/) |
 | **Python** | v3.11+ | [python.org](https://www.python.org/) |
 
 <br/>
@@ -159,38 +146,18 @@ cd IngredientSight-AI
 
 ### Step 2 — Configure Environment Variables
 
-Copy the example env file and fill in your API keys:
-
-```bash
-# Linux / macOS
-cp .env.example .env
-
-# Windows
-copy .env.example .env
-```
-
-Open `.env` and set your keys:
+Create your `.env` file in the project root:
 
 ```env
-# ── Required ──────────────────────────────────────────────────────────
-# Google Gemini API key — powers Ingredient, Safety & OCR fallback agents
-# Get yours free at: https://aistudio.google.com/apikey
-GEMINI_API_KEY=your_gemini_api_key_here
+# ── Recommended: Tavily Search API (Web research) ───────────────────────
+TAVILY_API_KEY=tvly-dev-your_tavily_key_here
 
-# ── Recommended ───────────────────────────────────────────────────────
-# Tavily Search API — enables real-time web research per ingredient
-# Get yours at: https://app.tavily.com
-TAVILY_API_KEY=your_tavily_api_key_here
-
-# ── Optional ──────────────────────────────────────────────────────────
-# Groq API — used as OCR Vision fallback (Stage 4) if Gemini also fails
-GROQ_API_KEY=
-
-# Path to tesseract.exe on Windows (only needed if you install Tesseract)
-# TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe
+# ── Optional: LLM Providers (for friendly summary generation) ───────────
+GEMINI_API_KEY=your_gemini_key_here
+GROQ_API_KEY=your_groq_key_here
 ```
 
-> ⚠️ **Never commit your `.env` file.** It is already listed in `.gitignore`.
+> ⚠️ **Never commit your `.env` file.** It is included in `.gitignore`.
 
 <br/>
 
@@ -198,12 +165,10 @@ GROQ_API_KEY=
 
 **Backend (Python):**
 ```bash
-# Recommended — install from the requirements file
 pip install -r requirements.txt
 ```
 
-> **OCR Note:** `rapidocr-onnxruntime` (the primary OCR engine) runs entirely locally with no extra system dependencies — it just works out of the box.  
-> If you also want `pytesseract` as a second local fallback, install the [Tesseract binary](https://github.com/UB-Mannheim/tesseract/wiki) and set `TESSERACT_CMD` in your `.env`.
+> **Note on OCR:** `rapidocr-onnxruntime` runs completely locally with no need for external binaries like Tesseract. It works immediately out of the box.
 
 **Frontend (Node.js):**
 ```bash
@@ -212,13 +177,13 @@ npm install
 
 <br/>
 
-### Step 4 — Launch the Application
+### Step 4 — Run the Project
 
-Open **two terminal windows** and run each command simultaneously:
+Open **two terminal windows**:
 
-**Terminal 1 — Backend (FastAPI + LangGraph)**
+**Terminal 1 — Backend (FastAPI)**
 ```bash
-python server.py
+python -m uvicorn backend.app:app --host 0.0.0.0 --port 8000
 ```
 
 | Service | URL |
@@ -236,7 +201,7 @@ npm run dev
 
 | Service | URL |
 |---------|-----|
-| 🌐 Frontend App | `http://localhost:5173` |
+| 🌐 Web Application | `http://localhost:5173` |
 
 <br/>
 
@@ -244,33 +209,29 @@ npm run dev
 
 ## 🔬 How the Pipeline Works
 
-Once you upload a product label image, the following 5-step sequence executes automatically:
+Once you upload or drag a product label image:
 
 ```
-Step 1 — 🔍  OCR Agent  (local-first — zero API quota on primary path)
-              1a. RapidOCR (ONNX, local)  — extracts text, no API calls, no system binary
-              1b. pytesseract (local)      — fallback if RapidOCR yields empty result
-              1c. Gemini Vision API        — API fallback if both local engines fail
-              1d. Groq Vision API          — last-resort API fallback
-              → Returns raw extracted text from the ingredient panel
+Step 1 — 🔍  RapidOCR Engine
+              Processes the image locally with ONNX Runtime models
+              → Extracts full INCI text in top-down reading order
 
-Step 2 — 🧪  Ingredient Agent
-              Parses the OCR output
-              → Normalizes and identifies each INCI ingredient name
+Step 2 — 🧪  INCI Parser & Normalizer
+              Tokenizes ingredient commas/delimiters, resolves synonyms and handles edge cases
+              → Outputs normalized list of discrete chemical and botanical names
 
-Step 3 — 🔬  Research Agent
-              Queries Tavily Search for each key ingredient
-              → Gathers clinical studies, safety data & usage guidelines
+Step 3 — 🛡️  CosIng & CLP Regulatory Analysis
+              Deterministically compares against 4,700+ Annex II, III, IV, V, VI entries
+              → Classifies status (Prohibited, Restricted, Positive List, Unidentified)
+              → Maps CLP Hazard codes and CMR Categories
 
-Step 4 — 🛡️  Safety Agent
-              Evaluates each ingredient against safety references
-              → Computes a dermatological safety score (0–100)
-              → Flags allergens, irritants & comedogenic compounds
+Step 4 — 🔬  Tavily Web Research
+              Pulls reputable data from Europa SCCS, CIR, and scientific databases
+              → Gathers clinical alerts and safety context
 
-Step 5 — 📋  Report Agent
-              Synthesizes all findings into a structured report
-              → Saves as .md (human-readable) and .json (machine-readable)
-              → Returns safety_score and risk_label to the dashboard
+Step 5 — 📋  Summary & Interactive Report
+              Gemini / Groq produces a structured summary of the verified facts
+              → Live report card displays with candidate verifications and export options
 ```
 
 <br/>
@@ -282,41 +243,40 @@ Step 5 — 📋  Report Agent
 ```
 IngredientSight-AI/
 │
-├── 📂 langgraphagentic/          # Core 5-agent AI pipeline (Python)
-│   ├── graph.py                  # LangGraph StateGraph definition & wiring
-│   ├── ocr_agent.py              # Agent 1: RapidOCR → pytesseract → Gemini/Groq Vision
-│   ├── ingredient_agent.py       # Agent 2: INCI ingredient parser
-│   ├── research_agent.py         # Agent 3: Tavily web research
-│   ├── safety_agent.py           # Agent 4: Safety scoring engine
-│   └── report_agent.py           # Agent 5: Markdown + JSON report generator
+├── 📂 backend/                  # FastAPI Backend & Intelligence Services
+│   ├── app.py                   # Main FastAPI server and routing
+│   ├── config.py                # Environment configuration and provider logic
+│   ├── data_layer.py            # Local dataset loader and normalization
+│   ├── hazard_codes.py          # ECHA CLP hazard code descriptions
+│   ├── llm_summary.py           # Gemini & Groq plain-language summary builders
+│   ├── matcher.py               # Fuzzy matching & synonym lookup
+│   ├── models.py                # Pydantic request/response schemas
+│   ├── ocr.py                   # RapidOCR ONNX integration
+│   ├── parser.py                # INCI list parser
+│   ├── report.py                # Markdown report generator
+│   ├── rules.py                 # CosIng regulatory classification rules
+│   └── web_context.py           # Tavily search and source verification
 │
-├── 📂 src/                       # React + TypeScript frontend
+├── 📂 data/                     # Reference Datasets
+│   ├── reference.csv            # Consolidated EU CosIng Annexes & CLP data
+│   └── aliases.json             # Chemical synonym map
+│
+├── 📂 src/                      # React 19 + TypeScript Frontend
 │   ├── components/
-│   │   ├── NovaLandingPage.tsx   # Cinematic landing page (hero + feature panels)
-│   │   ├── LandingHero.tsx       # Full-screen hero with glassmorphic nav
-│   │   ├── Reveal.tsx            # Scroll-reveal animation wrapper
-│   │   ├── ScrollVideoBackground.tsx  # Scroll-driven video component
-│   │   ├── Dashboard.tsx         # Main AI analysis dashboard
-│   │   └── CustomCursor.tsx      # Custom cursor component
-│   ├── App.tsx                   # Root component — routes landing ↔ dashboard
-│   ├── main.tsx                  # Vite entry point
-│   └── index.css                 # Global styles, CSS variables & liquid-glass utilities
+│   │   ├── Analyzer.tsx         # Dashboard with drag-and-drop OCR
+│   │   ├── NovaLandingPage.tsx  # Cinematic hero & landing experience
+│   │   ├── Reveal.tsx           # Framer motion entrance animations
+│   │   ├── ScrollVideoBackground.tsx # Scroll-driven video background
+│   │   └── report/              # Interactive report and ingredient cards
+│   ├── App.tsx                  # Root application router
+│   └── main.tsx                 # Entry point
 │
-├── 📂 uploads/                   # Uploaded label images (runtime, gitignored)
-├── 📂 reports/                   # Generated AI reports (runtime, gitignored)
-├── 📂 public/                    # Static frontend assets (images, video)
-│
-├── server.py                     # FastAPI app — REST endpoints, image validation
-├── main.py                       # CLI entry point
-├── .env.example                  # Environment variable template (safe to commit)
-├── .gitignore                    # Comprehensive ignore rules
-├── vercel.json                   # Vercel config with long-lived asset cache headers
-├── render.yaml                   # Render.com deployment config
-├── vite.config.ts                # Vite build configuration
-├── tsconfig.json                 # TypeScript compiler config
-├── package.json                  # Node.js dependencies & scripts
-├── pyproject.toml                # Python project metadata
-└── requirements.txt              # Python dependencies list
+├── .env.example                 # Environment variable template
+├── .gitignore                   # Ignore rules
+├── vite.config.ts               # Vite configuration with local API proxy
+├── tsconfig.json                # TypeScript configuration
+├── package.json                 # Node dependencies
+└── requirements.txt             # Python dependencies
 ```
 
 <br/>
@@ -325,193 +285,48 @@ IngredientSight-AI/
 
 ## 🌐 API Reference
 
-### `POST /api/analyze`
+### `POST /api/analyze-image`
 
-Runs the full 5-agent LangGraph pipeline on an uploaded product label image.
+Upload a photo of a cosmetic ingredient label for OCR and full regulatory assessment.
 
-**Request (multipart/form-data):**
+**Request (`multipart/form-data`):**
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `file` | `UploadFile` | ✅ Yes | Product label image (PNG, JPG, WebP, GIF, BMP) |
-| `product_name` | `string` | No | Optional display name for the product |
+|---|---|---|---|
+| `file` | `UploadFile` | ✅ Yes | Image file (PNG, JPG, WebP, GIF, BMP) up to 8MB |
+| `product_name` | `string` | No | Optional product name |
 
-**Example Response:**
+---
+
+### `POST /api/web-context`
+
+Fetch real-time scientific citations for a specific cosmetic ingredient.
+
+**Request (`application/json`):**
 ```json
 {
-  "success": true,
-  "product_name": "CeraVe Moisturizing Cream",
-  "safety_score": 87,
-  "risk_label": "Low Risk",
-  "ocr_text": "INGREDIENTS: Aqua, Glycerin, Cetearyl Alcohol ...",
-  "ingredients": ["Aqua", "Glycerin", "Cetearyl Alcohol", "..."],
-  "research_results": {
-    "Glycerin": { "safety": "well-tolerated humectant", "sources": ["..."] }
-  },
-  "safety_analysis": {
-    "overall_score": 87,
-    "warnings": [],
-    "recommendations": ["Suitable for sensitive skin"]
-  },
-  "markdown_report": "# IngredientSight Safety Report\n...",
-  "json_report": { "product": "...", "score": 87 },
-  "report_md_path": "/reports/report_abc123.md",
-  "report_json_path": "/reports/report_abc123.json"
+  "ingredient": "Phenoxyethanol",
+  "include_other": false,
+  "topics": ["skin irritation", "use limits"]
 }
 ```
 
-<br/>
+---
 
 ### `GET /api/health`
 
-Returns the current health and configuration status of the backend pipeline.
+Returns the current system health and status of OCR and AI engines.
 
 ```json
 {
   "status": "ok",
-  "service": "IngredientSight AI LangGraph Pipeline",
-  "gemini_configured": true,
-  "tavily_configured": true,
-  "upload_dir": "/path/to/uploads",
-  "reports_dir": "/path/to/reports",
-  "port": 8000,
-  "host": "0.0.0.0"
+  "dataset_loaded": true,
+  "dataset_rows": 4722,
+  "ocr_available": true,
+  "llm_enabled": true,
+  "web_context_enabled": true
 }
 ```
-
-<br/>
-
----
-
-## 🔑 API Keys Reference
-
-| Variable | Required | Provider | Used By |
-|----------|----------|----------|---------|
-| `GEMINI_API_KEY` | ✅ Required | [Google AI Studio](https://aistudio.google.com/apikey) | Ingredient, Safety agents + OCR Stage 3 fallback |
-| `TAVILY_API_KEY` | ⚡ Recommended | [Tavily](https://app.tavily.com) | Research agent (real-time web search) |
-| `GROQ_API_KEY` | ⚡ Optional | [Groq Console](https://console.groq.com) | OCR Vision fallback — Stage 4 last resort |
-| `TESSERACT_CMD` | ⚡ Optional | [Tesseract installer](https://github.com/UB-Mannheim/tesseract/wiki) | Points pytesseract to the binary on Windows |
-
-> Without `TAVILY_API_KEY`, the Research Agent gracefully falls back to LLM-only knowledge. All core features remain fully operational.  
-> Without `GROQ_API_KEY`, the Groq Vision fallback is simply skipped — no errors thrown.
-
-<br/>
-
----
-
-## 🚢 Production Deployment (Vercel + Render)
-
-This project is deployed **free** with a split architecture: the React frontend lives on **Vercel**, and the FastAPI + LangGraph backend lives on **Render** (Vercel's free tier cannot host Python services).
-
-### Backend — Render (free tier)
-
-1. Create a **New Web Service** from the GitHub repo (`pritamdey0/IngredientSight-AI`)
-2. Configure:
-   | Setting | Value |
-   |---------|-------|
-   | Environment | `Python 3` |
-   | Build Command | `pip install -r requirements.txt` |
-   | Start Command | `python server.py` |
-   | Instance Type | `Free` |
-3. Add environment variables: `GEMINI_API_KEY`, `GOOGLE_API_KEY`, `TAVILY_API_KEY`, `GROQ_API_KEY` (all **Secret**), plus `PYTHON_VERSION=3.11.9`
-4. In **Settings**, set **Health Check Path** to `/api/health`
-5. Do **not** set `PORT` — Render injects it automatically and `server.py` reads it
-
-> ℹ️ The free tier sleeps after ~15 minutes of inactivity. The dashboard handles this gracefully: it retries the health check for up to ~2 minutes showing *"Waking up backend (free tier cold start)…"* while Render boots (60–90 s). Analyses take 2–4 minutes on the free 0.1 CPU instance.
-
-### Frontend — Vercel
-
-1. Import the same GitHub repo in Vercel — deploys **auto-trigger on every push to `main`**
-2. Add the environment variable **`VITE_API_URL = your_backend_url`** (this is baked into the build by `vite.config.ts` via `__BACKEND_URL__`)
-3. Framework preset: **Vite** · Build: `npm run build` · Output: `dist`
-4. ⚠️ If you change `VITE_API_URL`, you must **redeploy** for it to take effect — it is read at build time, not runtime
-
-### Local ↔ Cloud development
-
-`vite.config.ts` proxies `/api/*` to the local backend during development, following `SERVER_PORT`/`PORT` from your `.env` (default `8000`). With `VITE_API_URL` unset locally, the app talks to your own `python server.py`.
-
-<br/>
-
----
-
-## 🛡️ Security Notes
-
-- Uploaded files are validated against **image magic bytes** (not just file extensions) — spoofed file types are rejected before OCR ever runs
-- The `.env` file is **gitignored** — your API keys are never committed to version control
-- **If any key was ever accidentally committed**, rotate it immediately at the provider's console and generate a fresh one. You should also purge it from git history using `git filter-branch` or `git-filter-repo`
-- CORS is restricted to explicit origins: local dev (`localhost:3000` / `localhost:5173`) plus any `*.vercel.app` deployment — with credentials disabled per the CORS spec
-- All uploaded files are stored with a random UUID prefix — filenames cannot be predicted or enumerated
-
-<br/>
-
----
-
-## 📝 Changelog
-
-### v1.2.0 — Production Deployment + Reliability Hardening
-
-**☁️ Deployment (Vercel + Render, free tier)**
-- 🚀 Backend deployed to Render as a free Web Service; frontend to Vercel with GitHub auto-deploy on every push
-- 📄 `render.yaml` fixed — removed invalid `PORT` env-var declaration (`generateValue` is not a valid blueprint key; Render injects `PORT` automatically)
-- 🔧 `vite.config.ts` dev proxy now follows `SERVER_PORT`/`PORT` from `.env` instead of hard-coding `8000`
-
-**🐛 Bug Fixes**
-- 🆙 All Gemini calls migrated from retired `gemini-1.5-flash` → `gemini-2.5-flash` (the old model ID had been fully retired, breaking every agent)
-- 🆙 Groq vision fallback updated to the current `qwen/qwen3.8-27b` model (`llama-3.2-11b-vision-preview` deprecated)
-- 🐛 Fixed `ocr_agent.py` crash when RapidOCR returns a scalar elapsed time instead of a list
-- ⚡ `/api/analyze` converted to a sync route so multi-minute pipeline runs execute in Starlette's threadpool instead of blocking the event loop (dashboard health checks no longer freeze during analysis)
-- 🧴 Removed the dead `SAMPLE_IMAGE` fallback — requests without a real label image now fail fast with a clear HTTP 400 instead of silently analyzing a bundled sample
-- 🛡️ CORS hardened: explicit origins + `*.vercel.app` regex, `allow_credentials` disabled (wildcard + credentials is invalid per spec and was silently rejecting browser requests)
-- 🧪 Research Agent now matches OCR'd ingredients with normalized exact-first lookup (no more `Aqua` fetching research for `Aquaphthalmica` via loose substring collisions)
-- 🩺 Safety Agent negation regex tightened (`no parabens …` no longer flags parabens); `\b(?!un)safe\b` prevents "unsafe"/"unsafe" misclassification
-- 📁 Report filenames include a short UUID suffix — concurrent same-second analyses can no longer overwrite each other's files
-- 🧹 Deleted dead `extract_safety_score()` (never called, crashed on `None` responses)
-- 🧩 `pytesseract` and `rapidocr-onnxruntime` added to `pyproject.toml` (previously only in `requirements.txt`)
-- 📝 `.env.example` invalid box-drawing separator lines replaced with proper `#` comments (they were parsed as bogus key/value pairs by `python-dotenv`)
-
-**💚 Cold-start resilience (Render free tier)**
-- 🔄 Dashboard health check is now a patient retry loop (up to ~2 min) showing *"Waking up backend (free tier cold start)…"* instead of a false "Backend not connected" after 6 s
-- 🧪 Frontend now fails fast with a clear message if no file is attached, instead of sending a doomed `FormData`
-
-### v1.1.0 — Local-First OCR + Cinematic Landing Page
-
-**🔍 OCR Engine — Replaced API-only with local-first multi-stage pipeline**
-- 🆕 **RapidOCR** (`rapidocr-onnxruntime`) is now the **primary OCR engine** — runs entirely locally using ONNX models, no system binary required, zero API quota consumption, no rate-limit risk
-- 🆕 **pytesseract** added as **secondary local fallback** — gracefully skipped if the Tesseract binary is not installed; configurable via `TESSERACT_CMD` env var
-- ✅ **Gemini Vision API** demoted to Stage 3 — only called when both local engines fail
-- ✅ **Groq Vision API** added as **Stage 4 last-resort fallback** (uses `GROQ_API_KEY`)
-- 🗑️ Removed EasyOCR dependency (failed to install in target environment; replaced by lighter alternatives)
-- This change eliminates rate-limit errors entirely when running multiple analyses in quick succession
-
-**🎨 Frontend — Cinematic Landing Page Overhaul**
-- 🆕 `NovaLandingPage.tsx` — new cinematic landing page with full-screen atmospheric hero, glassmorphic navbar, scroll-reveal frosted capability panel, and `Get Started` CTA
-- 🆕 `LandingHero.tsx` — standalone hero section component with `Instrument Serif` display typography
-- 🆕 `Reveal.tsx` — reusable scroll-reveal animation wrapper using Framer Motion
-- 🆕 `ScrollVideoBackground.tsx` — scroll-driven video background component
-- 🎨 `index.css` — updated with `Instrument Serif` + `Inter` font stack, `--liquid-glass` CSS utility class, refined design tokens and CSS variables
-- 🚀 `vercel.json` — added long-lived `Cache-Control: public, max-age=31536000, immutable` headers for `/assets/*` — dramatically improves repeat-visit load times on deployed site
-- 🎨 Dashboard background updated to match the landing page's deep teal/midnight palette
-
-**🔒 Backend & Security**
-- ✅ `server.py` — image magic-byte validation (PNG/JPEG/WebP/GIF/BMP headers checked, not just file extensions)
-- ✅ `server.py` — explicit `400` errors instead of silently falling back to the bundled sample image
-- ✅ `server.py` — static file mounts for `/uploads` and `/reports` endpoints so saved reports are reachable via direct URLs
-- ✅ `.gitignore` — hardened to cover all `.env` variants (`*.env`, `.env.*`), Python cache dirs, test artifacts, and the `.freebuff` scratch folder
-
----
-
-## 🤝 Contributing
-
-Contributions, issues, and feature requests are welcome!
-
-1. **Fork** the repository
-2. Create your feature branch: `git checkout -b feat/your-feature-name`
-3. Commit your changes using [Conventional Commits](https://www.conventionalcommits.org/):
-   ```bash
-   git commit -m "feat: add amazing new feature"
-   ```
-4. Push to your branch: `git push origin feat/your-feature-name`
-5. Open a **Pull Request** and describe your changes
 
 <br/>
 
@@ -519,7 +334,7 @@ Contributions, issues, and feature requests are welcome!
 
 ## 📜 License
 
-This project is licensed under the **MIT License** — see the [LICENSE](./LICENSE) file for full details.
+This project is licensed under the **MIT License**.
 
 <br/>
 
@@ -527,13 +342,8 @@ This project is licensed under the **MIT License** — see the [LICENSE](./LICEN
 
 <div align="center">
 
-**Built with ❤️ using LangGraph · FastAPI · React 19 · Google Gemini**
+**Built with ❤️ for safer cosmetics.**
 
-*IngredientSight AI — Know exactly what's in your product.*
-
-<br/>
-
-[![GitHub Stars](https://img.shields.io/github/stars/pritamdey0/IngredientSight-AI?style=social)](https://github.com/pritamdey0/IngredientSight-AI)
-[![GitHub Forks](https://img.shields.io/github/forks/pritamdey0/IngredientSight-AI?style=social)](https://github.com/pritamdey0/IngredientSight-AI/fork)
+*IngredientSight AI — Sourced. Cited. Not Scored.*
 
 </div>

@@ -3,7 +3,45 @@
 @layer base {
   :root {
     --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-    --font-mono: 'Inter', system-ui, -apple-system, sans-serif;
+    /* Real monospace for the technical labels that the landing page already uses. */
+    --font-mono: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', 'Segoe UI Mono', Menlo, Consolas,
+      monospace;
+
+    /* ── Report design tokens ────────────────────────────────────────────────
+       One translucent sheet on the DNA background, same language as the landing
+       page: hairline rules, mono labels, status colour only on rules and dots.
+       ``--report-bg`` and the other fills are the opaque reference colours the
+       contrast script uses; the sheet itself is ``--report-glass`` (85 %) over
+       the brightest pixel of the asset, which still reaches AA. */
+    --report-bg: #0b0c0f;
+    --report-glass: rgba(11, 12, 15, 0.85);
+    --report-border: #2a2f37;
+    --report-rule: #21262d;
+    --report-ink: #f2f4f7;
+    --report-ink-strong: #dfe4ea;
+    --report-muted: #9aa3ae;
+    --report-focus: #93c5fd;
+
+    /* One token per status: chips, 2 px rules and count dots all read from it.
+       These are the tints that stay visible on the dark sheet; print redefines
+       them as the dark values that belong on paper. */
+    --status-prohibited: #fca5a5;
+    --status-restricted: #fdba74;
+    --status-permitted: #93c5fd;
+    --status-verify: #fcd34d;
+    --status-none: #94a3b8;
+    --status-unidentified: #cbd5e1;
+    --status-error: #fca5a5;
+
+    --notice-bg: #2a2415;
+    --notice-border: #fcd34d;
+    --notice-ink: #fcd34d;
+
+    --web-bg: #14161a;
+    --web-border: #39404a;
+    --web-ink: #c9cfd8;
+    --web-muted: #9aa3ae;
+    --web-link: #93c5fd;
   }
 
   body {
@@ -19,6 +57,12 @@
     background-color: rgba(255, 255, 255, 0.2);
     color: #ffffff;
   }
+
+  /* Visible focus for every control in the report. */
+  :where(button, a, input, summary, textarea):focus-visible {
+    outline: 2px solid var(--report-focus);
+    outline-offset: 2px;
+  }
 }
 
 /* Custom scrollbar hiding */
@@ -30,7 +74,62 @@
   scrollbar-width: none;
 }
 
-/* Custom glass panel definitions */
+/* Print: white paper, one card, no controls, no page break inside a block. */
+@media print {
+  :root {
+    --report-bg: #ffffff;
+    --report-border: #cbd5e1;
+    --report-rule: #e2e8f0;
+    --report-ink: #0f172a;
+    --report-ink-strong: #1e293b;
+    --report-muted: #475569;
+    --report-focus: #1d4ed8;
+    --status-verify: #b45309;
+    --status-prohibited: #b91c1c;
+    --status-restricted: #c2410c;
+    --status-permitted: #1d4ed8;
+    --status-none: #475569;
+    --status-unidentified: #1e293b;
+    --status-error: #b91c1c;
+    --notice-bg: #fffbeb;
+    --notice-border: #b45309;
+    --notice-ink: #78350f;
+    --web-bg: #f8fafc;
+    --web-border: #cbd5e1;
+    --web-ink: #334155;
+    --web-muted: #475569;
+    --web-link: #1d4ed8;
+  }
+
+  body,
+  .report-page {
+    background: #ffffff !important;
+    color: #0f172a;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+
+  .report-card {
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+  }
+
+  .report-block {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .report-card,
+  .report-card * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
 .glass-panel {
   background: rgba(18, 18, 18, 0.75);
   backdrop-filter: blur(16px);
@@ -45,5 +144,43 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* ── Entrance motion ────────────────────────────────────────────────────────
+   Used by TextRoll and the analyzer's upload panel. Nothing here is required
+   to read the page, so reduced-motion users simply get the final frame. */
+@keyframes roll-char {
+  from {
+    opacity: 0;
+    transform: translateY(0.45em);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
+.roll-char {
+  display: inline-block;
+  animation: roll-char 640ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.rise-in {
+  animation: rise-in 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roll-char,
+  .rise-in {
+    animation: none;
+  }
+}

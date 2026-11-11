@@ -26,10 +26,9 @@ __pycache__/
 .env.*.local
 *.env
 
-# ── Runtime data (generated at server start) ──────────────────────────────────
-uploads/
-reports/
+# ── Runtime artefacts ────────────────────────────────────────────────────────
 *.log
+.vercel/
 
 # ── OS / IDE artifacts ────────────────────────────────────────────────────────
 .DS_Store
