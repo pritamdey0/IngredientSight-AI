@@ -342,7 +342,7 @@ This project is licensed under the **MIT License**.
 
 <div align="center">
 
-**Built with ❤️ for safer cosmetics.**
+**Built with ❤️ for safer cosmetics ingredient analysis.**
 
 *IngredientSight AI — Sourced. Cited. Not Scored.*
 
