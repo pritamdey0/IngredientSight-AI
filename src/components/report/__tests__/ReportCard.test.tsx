@@ -2,8 +2,13 @@
 
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import type { Analysis, Ingredient, WebContext } from '../../../lib/api';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import type {
+  Analysis,
+  EvidenceBatchResponse,
+  Ingredient,
+  WebContext,
+} from '../../../lib/api';
 import { ReportCard } from '../ReportCard';
 
 const mocks = vi.hoisted(() => ({
@@ -11,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   renderReport: vi.fn(async () => ({ markdown_report: '# Ingredient report\n' })),
   searchWeb: vi.fn(),
   searchWebBatch: vi.fn(),
+  researchEvidenceBatch: vi.fn(),
 }));
 
 vi.mock('../../../lib/api', () => ({
@@ -18,6 +24,7 @@ vi.mock('../../../lib/api', () => ({
   renderReport: mocks.renderReport,
   searchWeb: mocks.searchWeb,
   searchWebBatch: mocks.searchWebBatch,
+  researchEvidenceBatch: mocks.researchEvidenceBatch,
 }));
 
 const DISCLAIMER =
@@ -105,12 +112,53 @@ function webContext(): WebContext {
   };
 }
 
-function renderCard(ingredients: Ingredient[]) {
+function evidenceBatch(): EvidenceBatchResponse {
+  return {
+    enabled: true,
+    product_summary: 'Two ingredient names were checked against the dataset.',
+    results: {
+      Benzidine: {
+        enabled: true,
+        researched: true,
+        ingredient: 'Benzidine',
+        message: null,
+        conclusion: 'The dataset leaves a skin endpoint open and the sources add a partial view.',
+        endpoints: [
+          {
+            field: 'skin_irritation',
+            label: 'Skin irritation',
+            dataset_status: 'NOT_ASSESSED',
+            dataset_value: null,
+            missing: true,
+            finding: 'The retrieved sources describe a dermal endpoint for this ingredient.',
+            assessment: 'Supported',
+            limitations: null,
+            evidence_label: 'FROM WEB SOURCE REVIEW',
+            sources: [
+              {
+                title: 'SCCS opinion on the ingredient',
+                site: 'ec.europa.eu',
+                publisher: 'ec.europa.eu',
+                url: 'https://ec.europa.eu/health/sccs',
+                source_type: 'official_scientific',
+                retrieved_date: '2026-11-11',
+                excerpt: 'The committee reviewed dermal exposure.',
+              },
+            ],
+          },
+        ],
+      },
+    },
+  };
+}
+
+function renderCard(ingredients: Ingredient[], evidenceEnabled = false) {
   const result = render(
     <ReportCard
       result={analysis(ingredients)}
       names={ingredients.map((item) => item.input_name)}
       webEnabled
+      evidenceEnabled={evidenceEnabled}
       onNameChange={() => undefined}
       onRecheck={() => undefined}
     />,
@@ -128,6 +176,7 @@ beforeEach(() => {
   mocks.renderReport.mockClear();
   mocks.searchWeb.mockReset();
   mocks.searchWebBatch.mockReset();
+  mocks.researchEvidenceBatch.mockReset();
 });
 
 describe('report card shell', () => {
@@ -246,5 +295,68 @@ describe('web context', () => {
     expect(Object.keys(after.web_context)).toEqual(['Benzidine']);
     expect(after.ingredients).toEqual(before.ingredients);
     expect(after.summary).toEqual(before.summary);
+  });
+});
+
+describe('evidence review', () => {
+  it('never runs and shows no panel when the server does not offer it', () => {
+    const { card } = renderCard([prohibited(), fullyPopulated()]);
+
+    expect(mocks.researchEvidenceBatch).not.toHaveBeenCalled();
+    expect(within(card).queryByTestId('evidence-panel')).toBeNull();
+    expect(card.textContent).not.toContain('FROM WEB SOURCE REVIEW');
+  });
+
+  it('researches the gaps automatically and labels every web finding', async () => {
+    mocks.researchEvidenceBatch.mockResolvedValue(evidenceBatch());
+    const { card } = renderCard([prohibited(), fullyPopulated()], true);
+
+    expect(mocks.researchEvidenceBatch).toHaveBeenCalledTimes(1);
+    const panel = await within(card).findByTestId('evidence-panel');
+    expect(panel.textContent).toContain('External evidence review');
+    expect(panel.textContent).toContain('FROM WEB SOURCE REVIEW');
+    expect(panel.textContent).toContain(
+      'The retrieved sources describe a dermal endpoint for this ingredient.',
+    );
+    expect(panel.textContent).toContain('Supported by the retrieved sources');
+    expect(panel.textContent).toContain('dataset NOT_ASSESSED');
+
+    const link = within(panel).getByRole('link', { name: /SCCS opinion on the ingredient/ });
+    expect(link).toHaveAttribute('href', 'https://ec.europa.eu/health/sccs');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+
+    // The dataset side and the status are untouched by the review.
+    const block = within(card).getAllByTestId('ingredient-block')[0];
+    expect(within(block).getByText('Prohibited')).toBeInTheDocument();
+    expect(card.textContent).toContain('No data in dataset');
+    expect(card.textContent).not.toMatch(/\b(safe|harmless|suitable)\b/i);
+  });
+
+  it('shows the validated product reading with its evidence label', async () => {
+    mocks.researchEvidenceBatch.mockResolvedValue(evidenceBatch());
+    const { card } = renderCard([prohibited(), fullyPopulated()], true);
+
+    await within(card).findByTestId('evidence-panel');
+    expect(card.textContent).toContain('AI-written product reading / FROM WEB SOURCE REVIEW');
+    expect(card.textContent).toContain(
+      'Two ingredient names were checked against the dataset.',
+    );
+  });
+
+  it('adds evidence to the JSON download without touching the dataset', async () => {
+    mocks.researchEvidenceBatch.mockResolvedValue(evidenceBatch());
+    const { card } = renderCard([prohibited(), fullyPopulated()], true);
+
+    await within(card).findByTestId('evidence-panel');
+    fireEvent.click(within(card).getByRole('button', { name: 'Download .json' }));
+
+    const payload = JSON.parse(mocks.downloadFile.mock.calls[0][1] as string);
+    expect(Object.keys(payload.evidence)).toEqual(['Benzidine']);
+    expect(payload.product_summary).toBe('Two ingredient names were checked against the dataset.');
+    expect(payload.ingredients).toHaveLength(2);
+    expect(payload.evidence.Benzidine.endpoints[0].sources[0].url).toBe(
+      'https://ec.europa.eu/health/sccs',
+    );
   });
 });

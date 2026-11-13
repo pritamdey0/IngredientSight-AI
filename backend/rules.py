@@ -186,6 +186,46 @@ def _pick_primary_row(rows: list[dict]) -> dict:
     return min(rows, key=lambda row: STATUS_RANK.get(status_for_row(row), len(STATUS_ORDER)))
 
 
+def _identity_fields(row: dict | None) -> dict:
+    """Dataset identity and official source links, straight from the row.
+
+    Everything here is a dataset value or a link built from the dataset's own
+    annex number; nothing is derived or inferred.
+    """
+    if row is None:
+        return {
+            "chemical_name": config.NO_DATA,
+            "cas_number": config.NO_DATA,
+            "ec_number": config.NO_DATA,
+            "annex_title": config.NO_DATA,
+            "toxicity_class": config.NO_DATA,
+            "allergy_risk": config.NO_DATA,
+            "echa_hazard_classes": config.NO_DATA,
+            "regulation_basis": config.NO_DATA,
+            "source_url": None,
+            "dataset_links": [],
+        }
+    annex = row.get("annex")
+    url = config.cosing_annex_url(annex)
+    links: list[dict] = []
+    if url:
+        links.append({"label": f"EU CosIng Annex {str(annex).upper()}", "url": url})
+    if row.get("echa_h_codes"):
+        links.append({"label": "ECHA CLP inventory", "url": config.ECHA_CLP_INVENTORY_URL})
+    return {
+        "chemical_name": row.get("chemical_name") or config.NO_DATA,
+        "cas_number": row.get("cas_number") or config.NO_DATA,
+        "ec_number": row.get("ec_number") or config.NO_DATA,
+        "annex_title": row.get("annex_title") or config.NO_DATA,
+        "toxicity_class": row.get("toxicity_class") or config.NO_DATA,
+        "allergy_risk": row.get("allergy_risk") or config.NO_DATA,
+        "echa_hazard_classes": row.get("echa_hazard_classes") or config.NO_DATA,
+        "regulation_basis": row.get("regulation_basis") or config.NO_DATA,
+        "source_url": url,
+        "dataset_links": links,
+    }
+
+
 def _empty_ingredient(match: dict, status: str) -> dict:
     unknown_fields = list(ANNEX_FIELDS) + list(LIMIT_FIELDS) + [SKIN_IRRITATION_FIELD]
     return {
@@ -203,6 +243,7 @@ def _empty_ingredient(match: dict, status: str) -> dict:
         "unknown_fields": unknown_fields,
         "sources": [],
         "candidates": match.get("candidates") or [],
+        **_identity_fields(None),
     }
 
 
@@ -268,6 +309,7 @@ def build_ingredient(match: dict) -> dict:
         "unknown_fields": unknown_fields,
         "sources": sources,
         "candidates": match.get("candidates") or [],
+        **_identity_fields(primary),
     }
 
 

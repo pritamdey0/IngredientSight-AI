@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from backend import config, matcher, report, rules
+from backend import config, evidence, matcher, report, rules
 
 
 def build(names: list[str], may_contain: list[str] | None = None,
@@ -37,6 +37,40 @@ def web_payload() -> dict:
         ],
         "message": None,
         "notice": "Unverified web context. This is not part of the assessment.",
+    }
+
+
+def evidence_payload(finding: str = "The retrieved sources describe a dermal endpoint.") -> dict:
+    return {
+        "enabled": True,
+        "researched": True,
+        "ingredient": "Benzidine",
+        "message": None,
+        "conclusion": "The dataset leaves the skin endpoints open and the sources add a partial view.",
+        "endpoints": [
+            {
+                "field": "skin_irritation",
+                "label": "Skin irritation",
+                "dataset_status": "NOT_ASSESSED",
+                "dataset_value": None,
+                "missing": True,
+                "finding": finding,
+                "assessment": "Supported",
+                "limitations": None,
+                "evidence_label": evidence.EVIDENCE_LABEL,
+                "sources": [
+                    {
+                        "title": "SCCS opinion on the ingredient",
+                        "site": "ec.europa.eu",
+                        "publisher": "ec.europa.eu",
+                        "url": "https://ec.europa.eu/health/sccs",
+                        "source_type": "official_scientific",
+                        "retrieved_date": "2026-11-11",
+                        "excerpt": "The committee reviewed dermal exposure.",
+                    }
+                ],
+            }
+        ],
     }
 
 
@@ -241,3 +275,110 @@ def test_cmr_flag_is_reported_with_its_categories():
     item = rules.build_ingredient(matcher.match_ingredient("Benzidine"))
     markdown = report.build_markdown(build(["Benzidine"]))
     assert item["flags"]["cmr"]["categories"] in markdown
+
+
+# ---- dataset identity and endpoints (FROM DATASET) -----------------------
+def test_identity_and_endpoint_blocks_are_labelled_from_dataset():
+    markdown = report.build_markdown(build(["Benzidine"]))
+    assert report.DATASET_LABEL == "FROM DATASET"
+    assert report.IDENTITY_HEADING in markdown
+    assert report.ENDPOINT_HEADING in markdown
+    assert f"#### {report.IDENTITY_HEADING}" in markdown
+    assert f"#### {report.ENDPOINT_HEADING}" in markdown
+
+
+def test_dataset_endpoint_block_states_the_missing_and_present_endpoints():
+    markdown = report.build_markdown(build(["Benzidine"]))
+    assert "- Skin irritation: NOT_ASSESSED (no dataset value)" in markdown
+    assert "- Eye irritation: NOT_IN_DATASET (no dataset value)" in markdown
+
+
+# ---- external evidence review (FROM WEB SOURCE REVIEW) -------------------
+def test_evidence_block_is_absent_until_it_is_supplied():
+    markdown = report.build_markdown(build(["Benzidine"]))
+    assert report.EVIDENCE_HEADING not in markdown
+
+
+def test_evidence_block_labels_web_findings_and_keeps_the_source_url():
+    markdown = report.build_markdown(build(["Benzidine"]), evidence={"Benzidine": evidence_payload()})
+    assert report.EVIDENCE_HEADING == "External evidence review (FROM WEB SOURCE REVIEW)"
+    assert f"#### {report.EVIDENCE_HEADING}" in markdown
+    assert "The retrieved sources describe a dermal endpoint." in markdown
+    assert "Supported by the retrieved sources" in markdown
+    assert f"Evidence label: {report.WEB_LABEL}" in markdown
+    assert "https://ec.europa.eu/health/sccs" in markdown
+    assert "retrieved 2026-11-11" in markdown
+
+
+def test_evidence_block_shows_only_the_missing_endpoints():
+    markdown = report.build_markdown(build(["Benzidine"]), evidence={"Benzidine": evidence_payload()})
+    block = markdown.split(f"#### {report.EVIDENCE_HEADING}")[1].split("## Overall product analysis")[0]
+    assert "Skin irritation" in block
+    assert "Eye irritation" not in block
+
+
+def test_evidence_block_reports_the_no_evidence_sentence_verbatim():
+    payload = evidence_payload()
+    payload["researched"] = False
+    payload["endpoints"][0]["finding"] = config.NO_WEB_EVIDENCE
+    payload["endpoints"][0]["assessment"] = "Insufficient"
+    payload["endpoints"][0]["sources"] = []
+    markdown = report.build_markdown(build(["Benzidine"]), evidence={"Benzidine": payload})
+    assert config.NO_WEB_EVIDENCE in markdown
+    assert "Insufficient evidence in the retrieved sources" in markdown
+
+
+def test_evidence_block_does_not_change_the_dataset_facts():
+    result = build(["Benzidine", "Glycerin"])
+    without = report.build_markdown(result)
+    with_evidence = report.build_markdown(result, evidence={"Benzidine": evidence_payload()})
+    row = next(line for line in without.splitlines() if line.startswith("| 1 | Benzidine"))
+    assert row in with_evidence
+    assert with_evidence.count("| Prohibited | 1 |") == without.count("| Prohibited | 1 |")
+    assert "> **Disclaimer:**" in with_evidence
+
+
+def test_evidence_block_reports_a_missing_configuration_message():
+    payload = {
+        "enabled": True,
+        "researched": False,
+        "ingredient": "Benzidine",
+        "message": "Automated evidence review is not configured.",
+        "conclusion": None,
+        "endpoints": [],
+    }
+    markdown = report.build_markdown(build(["Benzidine"]), evidence={"Benzidine": payload})
+    assert "Automated evidence review is not configured." in markdown
+
+
+def test_evidence_block_never_uses_verdict_words():
+    markdown = report.build_markdown(build(["Benzidine"]), evidence={"Benzidine": evidence_payload()})
+    body = markdown.replace(report.FOOTER_NOTE, "").replace(config.DISCLAIMER, "").lower()
+    for phrase in ("safe", "harmless", "low risk", "risk score"):
+        assert not re.search(r"\b" + phrase + r"\b", body)
+
+
+# ---- product-level sections ----------------------------------------------
+def test_product_overview_counts_matches_and_researched_ingredients():
+    result = build(["Benzidine", "Glycerin"])
+    markdown = report.build_markdown(result, evidence={"Benzidine": evidence_payload()})
+    assert "## Product overview" in markdown
+    assert "- Extracted ingredient names: 2" in markdown
+    assert "- Dataset matches: 2" in markdown
+    assert "- Ingredients researched through web sources: 1" in markdown
+
+
+def test_product_analysis_lists_the_researched_count():
+    markdown = report.build_markdown(build(["Benzidine", "Glycerin"]), evidence={"Benzidine": evidence_payload()})
+    assert "## Overall product analysis" in markdown
+    assert "- Ingredients researched through web sources: 1" in markdown
+    assert report.PRODUCT_LIMITATION in markdown
+
+
+def test_product_summary_is_shown_when_supplied():
+    without = report.build_markdown(build(["Benzidine"]))
+    with_summary = report.build_markdown(
+        build(["Benzidine"]), product_summary="Two ingredient names were checked."
+    )
+    assert "AI-written reading of the data above" not in without
+    assert "AI-written reading of the data above: Two ingredient names were checked." in with_summary

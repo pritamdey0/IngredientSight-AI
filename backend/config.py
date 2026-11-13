@@ -91,6 +91,40 @@ def web_context_enabled() -> bool:
     return bool(TAVILY_API_KEY)
 
 
+# ---- Canonical dataset source links --------------------------------------
+# Built from the dataset's own annex number, so a link always points at the
+# official CosIng annex list the record came from. No URL is ever invented.
+COSING_ANNEX_LIST_URL = (
+    "https://ec.europa.eu/growth/tools-databases/cosing/reference/annexes/list/{annex}"
+)
+ECHA_CLP_INVENTORY_URL = (
+    "https://echa.europa.eu/information-on-chemicals/cl-inventory-database"
+)
+
+
+def cosing_annex_url(annex: str | None) -> str | None:
+    value = (annex or "").strip().upper()
+    if not value or value == "NONE" or value == NO_DATA.upper():
+        return None
+    return COSING_ANNEX_LIST_URL.format(annex=value)
+
+
+# ---- Optional automated evidence review (Tavily + LLM) -------------------
+# The review only ever supplements the dataset; it never overwrites a record.
+EVIDENCE_CACHE_TTL_SECONDS = 24 * 60 * 60
+EVIDENCE_MAX_OUTPUT_TOKENS = 1600
+EVIDENCE_BATCH_MAX = 6
+EVIDENCE_ASSESSMENTS = ("Supported", "Limited", "Conflicting", "Insufficient")
+EVIDENCE_FINDING_MAX_CHARS = 700
+EVIDENCE_LIMIT_MAX_CHARS = 320
+NO_WEB_EVIDENCE = "No sufficient reliable web evidence was identified."
+
+
+def evidence_enabled() -> bool:
+    """The review needs both a web search key and an LLM key."""
+    return web_context_enabled() and llm_enabled()
+
+
 # ---- Server --------------------------------------------------------------
 def _int_env(name: str, default: int) -> int:
     raw = os.getenv(name, "").strip()

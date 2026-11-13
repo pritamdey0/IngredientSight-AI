@@ -63,19 +63,20 @@ _WORD_RE = re.compile(r"[A-Za-z][A-Za-z0-9'-]*")
 _SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
 
 
-def generate(system: str, user: str) -> str | None:
+def generate(system: str, user: str, max_tokens: int | None = None) -> str | None:
     """Single place where a provider is called. Returns raw text or None."""
     if config.LLM_PROVIDER == "gemini":
-        return _generate_gemini(system, user)
+        return _generate_gemini(system, user, max_tokens)
     if config.LLM_PROVIDER == "groq":
-        return _generate_groq(system, user)
+        return _generate_groq(system, user, max_tokens)
     return None
 
 
-def _gemini_payload(system: str, user: str, no_thinking: bool) -> dict:
+def _gemini_payload(system: str, user: str, no_thinking: bool,
+                    max_tokens: int | None = None) -> dict:
     generation = {
         "temperature": 0,
-        "maxOutputTokens": config.LLM_MAX_OUTPUT_TOKENS,
+        "maxOutputTokens": max_tokens or config.LLM_MAX_OUTPUT_TOKENS,
         "responseMimeType": "application/json",
     }
     if no_thinking:
@@ -89,7 +90,7 @@ def _gemini_payload(system: str, user: str, no_thinking: bool) -> dict:
     }
 
 
-def _generate_gemini(system: str, user: str) -> str | None:
+def _generate_gemini(system: str, user: str, max_tokens: int | None = None) -> str | None:
     url = (
         "https://generativelanguage.googleapis.com/v1beta/models/"
         f"{config.LLM_MODEL}:generateContent"
@@ -101,7 +102,7 @@ def _generate_gemini(system: str, user: str) -> str | None:
     # First without reasoning tokens; some models reject that field, so fall
     # back to the plain payload once.
     for no_thinking in (True, False):
-        payload = _gemini_payload(system, user, no_thinking)
+        payload = _gemini_payload(system, user, no_thinking, max_tokens)
         try:
             with httpx.Client(timeout=config.LLM_TIMEOUT_SECONDS) as client:
                 response = client.post(url, json=payload, headers=headers)
@@ -125,7 +126,7 @@ def _extract_text(data: dict) -> str | None:
     return text.strip() or None
 
 
-def _generate_groq(system: str, user: str) -> str | None:
+def _generate_groq(system: str, user: str, max_tokens: int | None = None) -> str | None:
     """Call the Groq Chat Completions API and return raw text, or None on failure."""
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
@@ -139,7 +140,7 @@ def _generate_groq(system: str, user: str) -> str | None:
             {"role": "user", "content": user},
         ],
         "temperature": 0,
-        "max_tokens": config.LLM_MAX_OUTPUT_TOKENS,
+        "max_tokens": max_tokens or config.LLM_MAX_OUTPUT_TOKENS,
         "response_format": {"type": "json_object"},
     }
     try:

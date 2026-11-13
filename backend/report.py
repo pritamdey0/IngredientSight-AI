@@ -1,12 +1,15 @@
 """Deterministic Markdown report built from the structured result.
 
-Only fixed sentences and dataset values appear here. No LLM output, and the
-only web text is the verbatim excerpt list the caller explicitly supplies.
+Only fixed sentences, dataset values and already-validated evidence findings
+appear here. Dataset facts are always labelled FROM DATASET. Optional web
+source review is labelled FROM WEB SOURCE REVIEW and is shown in its own
+section: it never replaces a dataset value and never changes a status, a flag
+or a count.
 """
 
 from __future__ import annotations
 
-from . import config, rules
+from . import config, evidence, rules
 
 STATUS_TEXT = {
     rules.STATUS_PROHIBITED: "Prohibited in cosmetic products (EU Annex II).",
@@ -86,6 +89,27 @@ SOURCE_TYPE_LABELS = {
     "other": "Other",
 }
 
+# Identity fields shown from the dataset's own columns, in order.
+IDENTITY_KEYS = (
+    ("Chemical name", "chemical_name"),
+    ("CAS number", "cas_number"),
+    ("EC number", "ec_number"),
+)
+
+# Evidence labels and assessment wording (neutral, never a verdict).
+DATASET_LABEL = "FROM DATASET"
+WEB_LABEL = "FROM WEB SOURCE REVIEW"
+IDENTITY_HEADING = f"Identity ({DATASET_LABEL})"
+ENDPOINT_HEADING = f"Toxicological endpoints ({DATASET_LABEL})"
+EVIDENCE_HEADING = f"External evidence review ({WEB_LABEL})"
+
+EVIDENCE_ASSESSMENT_LABELS = {
+    "Supported": "Supported by the retrieved sources",
+    "Limited": "Limited evidence in the retrieved sources",
+    "Conflicting": "Conflicting evidence in the retrieved sources",
+    "Insufficient": "Insufficient evidence in the retrieved sources",
+}
+
 ANNEX_FIELDS = ("annex", "reference_number", "permitted_list")
 ANNEX_ONLY_FIELDS = ANNEX_FIELDS + tuple(rules.LIMIT_FIELDS)
 
@@ -96,6 +120,10 @@ FOOTER_NOTE = (
 
 WEB_HEADING = "Web context (unverified, not part of the assessment)"
 NO_ANNEX_SUMMARY = "No annex entry, so no annex limits apply in the dataset."
+PRODUCT_LIMITATION = (
+    "This check covers the listed ingredients only. It is not a conclusion about the product as "
+    "a whole, and finding no prohibited entry is not an assessment of the finished product."
+)
 
 
 def _plural(count: int, singular: str, plural: str | None = None) -> str:
@@ -228,6 +256,84 @@ def _missing_lines(ingredient: dict) -> list[str]:
     return lines
 
 
+# ---- dataset identity + toxicological endpoints (FROM DATASET) -------------
+def _identity_lines(ingredient: dict) -> list[str]:
+    """Identity values and official source links, all straight from the dataset."""
+    lines = [f"#### {IDENTITY_HEADING}", ""]
+    match_label = MATCH_TYPE_LABELS.get(ingredient["match_type"], ingredient["match_type"])
+    lines.append(f"- Input name: {ingredient['input_name']}")
+    lines.append(f"- Matched dataset name: {ingredient['matched_name']}")
+    lines.append(f"- Match type: {match_label}")
+    for label, key in IDENTITY_KEYS:
+        value = ingredient.get(key)
+        if value and value != config.NO_DATA:
+            lines.append(f"- {label}: {value}")
+    for link in ingredient.get("dataset_links") or []:
+        url = link.get("url")
+        if url:
+            lines.append(f"- Official source: [{link.get('label')}]({url})")
+    lines.append("")
+    return lines
+
+
+def _endpoint_lines(ingredient: dict) -> list[str]:
+    """The dataset's answer per toxicological endpoint; gaps are stated plainly."""
+    lines = [f"#### {ENDPOINT_HEADING}", ""]
+    for state in evidence.dataset_endpoints(ingredient):
+        if state["missing"]:
+            lines.append(f"- {state['label']}: {state['dataset_status']} (no dataset value)")
+        else:
+            lines.append(f"- {state['label']}: {state['dataset_value']}")
+    lines.append("")
+    return lines
+
+
+# ---- external web source review (FROM WEB SOURCE REVIEW) ------------------
+def has_research(payload) -> bool:
+    """True when a review payload carries at least one retrieved source."""
+    if not isinstance(payload, dict):
+        return False
+    for endpoint in payload.get("endpoints") or []:
+        if endpoint.get("sources"):
+            return True
+    return False
+
+
+def _evidence_lines(payload) -> list[str]:
+    """Render a validated review payload, or nothing when none was supplied."""
+    if not isinstance(payload, dict):
+        return []
+    lines = [f"#### {EVIDENCE_HEADING}", ""]
+    if payload.get("message"):
+        lines.append(f"- {payload['message']}")
+        lines.append("")
+        return lines
+
+    for endpoint in payload.get("endpoints") or []:
+        if not endpoint.get("missing"):
+            continue
+        lines.append(f"- **{endpoint.get('label') or endpoint.get('field')}**")
+        lines.append(f"    - Dataset status: {endpoint.get('dataset_status')}")
+        if endpoint.get("finding"):
+            lines.append(f"    - External finding: {endpoint['finding']}")
+        if endpoint.get("assessment"):
+            label = EVIDENCE_ASSESSMENT_LABELS.get(endpoint["assessment"], endpoint["assessment"])
+            lines.append(f"    - Evidence assessment: {label}")
+        if endpoint.get("limitations"):
+            lines.append(f"    - Limitation: {endpoint['limitations']}")
+        lines.append(f"    - Evidence label: {endpoint.get('evidence_label') or WEB_LABEL}")
+        for source in endpoint.get("sources") or []:
+            site = source.get("site") or ""
+            title = source.get("title") or site or "Source"
+            url = source.get("url") or ""
+            retrieved = source.get("retrieved_date") or config.NO_DATA
+            lines.append(f"    - Source: [{title}]({url}) · {site} · retrieved {retrieved}")
+    if payload.get("conclusion"):
+        lines.append(f"- Conclusion: {payload['conclusion']}")
+    lines.append("")
+    return lines
+
+
 def _web_items(web) -> tuple[list[dict], str | None]:
     """Accept either a full web-context payload or a bare item list."""
     if isinstance(web, dict):
@@ -259,7 +365,7 @@ def _web_lines(web) -> list[str]:
     return lines
 
 
-def _detail_lines(index: int, ingredient: dict, web) -> list[str]:
+def _detail_lines(index: int, ingredient: dict, web, review) -> list[str]:
     status = ingredient["status"]
     match_label = MATCH_TYPE_LABELS.get(ingredient["match_type"], ingredient["match_type"])
     lines = [
@@ -300,20 +406,83 @@ def _detail_lines(index: int, ingredient: dict, web) -> list[str]:
         lines.append(f"- Sources: {config.NO_DATA}")
 
     lines.append("")
+    lines.extend(_identity_lines(ingredient))
+    lines.extend(_endpoint_lines(ingredient))
+    lines.extend(_evidence_lines(review))
     if web:
         lines.extend(_web_lines(web))
     return lines
 
 
+# ---- product-level sections ----------------------------------------------
+def _researched_count(ingredients: list[dict], evidence_map: dict) -> int:
+    total = 0
+    for ingredient in ingredients:
+        review = evidence_map.get(ingredient["input_name"], evidence_map.get(
+            ingredient["input_name"].strip().lower()
+        ))
+        if has_research(review):
+            total += 1
+    return total
+
+
+def _product_overview(result: dict, evidence_map: dict) -> list[str]:
+    ingredients = result["ingredients"]
+    summary = result["summary"]
+    matched = sum(1 for item in ingredients if item["status"] != rules.STATUS_UNIDENTIFIED)
+    researched = _researched_count(ingredients, evidence_map)
+    with_gaps = sum(1 for item in ingredients if missing_field_labels(item))
+    lines = ["## Product overview", ""]
+    lines.append(f"- Extracted ingredient names: {summary['total']}")
+    lines.append(f"- Dataset matches: {matched}")
+    lines.append(f"- Unmatched ingredients: {summary['unidentified']}")
+    lines.append(f"- Ingredients to verify: {summary['possible_match_verify']}")
+    lines.append(f"- Ingredients with no dataset value for at least one field: {with_gaps}")
+    lines.append(f"- Ingredients researched through web sources: {researched}")
+    lines.append(f"- {PRODUCT_LIMITATION}")
+    lines.append("")
+    return lines
+
+
+def _product_analysis(result: dict, evidence_map: dict, product_summary: str | None) -> list[str]:
+    ingredients = result["ingredients"]
+    summary = result["summary"]
+    researched = _researched_count(ingredients, evidence_map)
+    with_gaps = sum(1 for item in ingredients if missing_field_labels(item))
+    lines = ["## Overall product analysis", ""]
+    lines.append(f"- Total ingredients: {summary['total']}")
+    lines.append(f"- Prohibited entries identified: {summary['prohibited']}")
+    lines.append(f"- Restricted entries identified: {summary['restricted']}")
+    lines.append(f"- Positive-list entries identified: {summary['permitted_with_limits']}")
+    lines.append(f"- Unmatched ingredients: {summary['unidentified']}")
+    lines.append(f"- Ingredients requiring manual verification: {summary['possible_match_verify']}")
+    lines.append(f"- Ingredients with missing dataset information: {with_gaps}")
+    lines.append(f"- Ingredients researched through web sources: {researched}")
+    if summary["cmr_flagged"]:
+        lines.append(f"- Ingredients with a CMR classification flag: {summary['cmr_flagged']}")
+    if summary["fragrance_allergens"]:
+        lines.append(
+            f"- Ingredients with a fragrance allergen labelling requirement: {summary['fragrance_allergens']}"
+        )
+    lines.append(f"- {PRODUCT_LIMITATION}")
+    if product_summary:
+        lines.append("")
+        lines.append(f"- AI-written reading of the data above: {product_summary}")
+    lines.append("")
+    return lines
+
+
 def build_markdown(result: dict, web_context: dict | None = None,
-                   generated_at: str | None = None) -> str:
+                   generated_at: str | None = None, evidence: dict | None = None,
+                   product_summary: str | None = None) -> str:
     """Render the always-available template report.
 
-    ``web_context`` maps an input ingredient name to the payload the user
-    explicitly loaded; it is optional and never alters the dataset facts.
+    ``web_context`` and ``evidence`` map an input ingredient name to the payload
+    the caller supplied. Both are optional and never alter the dataset facts.
     """
     summary = result["summary"]
     dataset = result["dataset"]
+    evidence_map = evidence if isinstance(evidence, dict) else {}
 
     lines = ["# Ingredient report", ""]
     if result.get("product_name"):
@@ -328,6 +497,8 @@ def build_markdown(result: dict, web_context: dict | None = None,
 
     lines.append(f"> **Disclaimer:** {result['disclaimer']}")
     lines.append("")
+
+    lines.extend(_product_overview(result, evidence_map))
 
     lines.append("## Summary")
     lines.append("")
@@ -371,7 +542,12 @@ def build_markdown(result: dict, web_context: dict | None = None,
         web = web_context.get(ingredient["input_name"])
         if web is None:
             web = web_context.get(ingredient["input_name"].strip().lower())
-        lines.extend(_detail_lines(index, ingredient, web))
+        review = evidence_map.get(ingredient["input_name"])
+        if review is None:
+            review = evidence_map.get(ingredient["input_name"].strip().lower())
+        lines.extend(_detail_lines(index, ingredient, web, review))
+
+    lines.extend(_product_analysis(result, evidence_map, product_summary))
 
     if result.get("may_contain"):
         lines.append("## May contain")

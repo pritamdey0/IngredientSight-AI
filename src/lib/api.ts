@@ -30,6 +30,11 @@ export interface Candidate {
   score: number | null;
 }
 
+export interface DatasetLink {
+  label: string;
+  url: string;
+}
+
 export interface ClpHazard {
   code: string;
   text: string;
@@ -58,6 +63,17 @@ export interface Ingredient {
   unknown_fields: string[];
   sources: Source[];
   candidates: Candidate[];
+  // Dataset identity (FROM DATASET).
+  chemical_name?: string;
+  cas_number?: string;
+  ec_number?: string;
+  annex_title?: string;
+  toxicity_class?: string;
+  allergy_risk?: string;
+  echa_hazard_classes?: string;
+  regulation_basis?: string;
+  source_url?: string | null;
+  dataset_links?: DatasetLink[];
 }
 
 export interface Summary {
@@ -113,8 +129,51 @@ export interface WebBatchResponse {
   results: Record<string, WebContext>;
 }
 
+/** One retrieved source, listed verbatim. Never a dataset record. */
+export interface EvidenceSource {
+  title: string;
+  site: string;
+  publisher: string;
+  url: string;
+  source_type: string;
+  retrieved_date: string;
+  excerpt: string;
+}
+
+/** One toxicological endpoint: the dataset's value plus any web review. */
+export interface EvidenceEndpoint {
+  field: string;
+  label: string;
+  dataset_status: string;
+  dataset_value?: string | null;
+  missing: boolean;
+  finding?: string | null;
+  assessment?: string | null;
+  limitations?: string | null;
+  evidence_label?: string | null;
+  sources: EvidenceSource[];
+}
+
+export interface EvidenceResponse {
+  enabled: boolean;
+  researched: boolean;
+  ingredient: string;
+  message?: string | null;
+  conclusion?: string | null;
+  endpoints: EvidenceEndpoint[];
+}
+
+export interface EvidenceBatchResponse {
+  enabled: boolean;
+  results: Record<string, EvidenceResponse>;
+  product_summary?: string | null;
+}
+
 export type WebTopic =
   | 'skin irritation'
+  | 'eye irritation'
+  | 'skin sensitization'
+  | 'toxicity'
   | 'allergy / sensitization'
   | 'use limits'
   | 'hazard classification';
@@ -128,6 +187,7 @@ export interface Health {
   ocr_available: boolean;
   llm_enabled: boolean;
   web_context_enabled: boolean;
+  evidence_enabled: boolean;
 }
 
 const BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '');
@@ -203,16 +263,38 @@ export function searchWebBatch(
   }, 120_000);
 }
 
-/** Re-render the template Markdown report with the web panels the user loaded. */
+/** Re-render the template Markdown report with the panels the user loaded. */
 export function renderReport(
   analysis: Analysis,
   webContext: Record<string, WebContext>,
+  evidence?: Record<string, EvidenceResponse>,
+  productSummary?: string | null,
 ): Promise<{ markdown_report: string }> {
   return request<{ markdown_report: string }>('/api/report', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ analysis, web_context: webContext }),
+    body: JSON.stringify({
+      analysis,
+      web_context: webContext,
+      evidence: evidence ?? {},
+      product_summary: productSummary ?? null,
+    }),
   });
+}
+
+/**
+ * Automatically research the dataset gaps of every ingredient in one call.
+ * The server only ever adds findings; it never changes a dataset record.
+ */
+export function researchEvidenceBatch(
+  analysis: Analysis,
+  includeProductSummary = true,
+): Promise<EvidenceBatchResponse> {
+  return request<EvidenceBatchResponse>('/api/evidence/batch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ analysis, include_product_summary: includeProductSummary }),
+  }, 180_000);
 }
 
 export function health(): Promise<Health> {

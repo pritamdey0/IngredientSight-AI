@@ -1,17 +1,19 @@
 /** The whole result in ONE sheet: header, disclaimer, ledger, blocks, footer. */
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Download, FileJson, FileText, Globe, Loader2, Printer, TriangleAlert } from 'lucide-react';
+import { Download, FileJson, FileText, FlaskConical, Globe, Loader2, Printer, TriangleAlert } from 'lucide-react';
 import type { Analysis } from '../../lib/api';
 import { downloadFile, renderReport } from '../../lib/api';
 import { IngredientBlock } from './IngredientBlock';
 import { SUMMARY_CHIPS, STATUS_UI, needsWebPanel, webTopicsFor } from './status';
+import { useEvidence } from './useEvidence';
 import { useWebContext } from './useWebContext';
 
 interface ReportCardProps {
   result: Analysis;
   names: string[];
   webEnabled: boolean;
+  evidenceEnabled?: boolean;
   onNameChange: (index: number, value: string) => void;
   onRecheck: (index: number, value: string) => void;
 }
@@ -32,20 +34,24 @@ export const ReportCard: React.FC<ReportCardProps> = ({
   result,
   names,
   webEnabled,
+  evidenceEnabled = false,
   onNameChange,
   onRecheck,
 }) => {
   const web = useWebContext();
+  const evidence = useEvidence();
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState<'md' | 'json' | null>(null);
   const summary = result.summary;
 
   useEffect(() => {
     web.reset();
+    evidence.reset();
     setMessage(null);
+    if (evidenceEnabled) void evidence.run(result);
     // A new analysis starts with empty panels; cached searches are reused.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [result]);
+  }, [result, evidenceEnabled]);
 
   const pendingRequests = useMemo(
     () =>
@@ -59,8 +65,19 @@ export const ReportCard: React.FC<ReportCardProps> = ({
   const hasWeb = Object.keys(loadedWeb).length > 0;
   const batch = web.batch;
 
+  const evidenceResults = evidence.results();
+  const hasEvidence = Object.keys(evidenceResults).length > 0;
+  const productSummary = evidence.batch?.data?.product_summary ?? null;
+  const evidenceLoading = evidence.batch?.state === 'loading';
+
   const downloadJson = () => {
-    const payload = hasWeb ? { ...result, web_context: loadedWeb } : result;
+    const extras: Record<string, unknown> = {};
+    if (hasWeb) extras.web_context = loadedWeb;
+    if (hasEvidence) {
+      extras.evidence = evidenceResults;
+      extras.product_summary = productSummary;
+    }
+    const payload = Object.keys(extras).length > 0 ? { ...result, ...extras } : result;
     downloadFile(`${fileSlug(result)}.json`, JSON.stringify(payload, null, 2), 'application/json');
   };
 
@@ -68,13 +85,13 @@ export const ReportCard: React.FC<ReportCardProps> = ({
     setBusy('md');
     setMessage(null);
     try {
-      const payload = hasWeb
-        ? await renderReport(result, loadedWeb)
+      const payload = hasWeb || hasEvidence
+        ? await renderReport(result, loadedWeb, evidenceResults, productSummary)
         : { markdown_report: result.markdown_report };
       downloadFile(`${fileSlug(result)}.md`, payload.markdown_report, 'text/markdown');
     } catch {
       downloadFile(`${fileSlug(result)}.md`, result.markdown_report, 'text/markdown');
-      setMessage('The report was downloaded without the web panel: the server could not re-render it.');
+      setMessage('The report was downloaded without the extra panels: the server could not re-render it.');
     } finally {
       setBusy(null);
     }
@@ -214,6 +231,41 @@ export const ReportCard: React.FC<ReportCardProps> = ({
         </div>
       )}
 
+      {/* Automated evidence-review toolbar */}
+      {evidenceEnabled && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[color:var(--report-rule)] px-5 py-3 sm:px-7 print:hidden">
+          <button
+            type="button"
+            onClick={() => void evidence.run(result)}
+            disabled={evidenceLoading}
+            className={toolClass}
+          >
+            {evidenceLoading ? <Loader2 size={11} className="animate-spin" /> : <FlaskConical size={11} aria-hidden />}
+            Research missing data
+          </button>
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--report-muted)]">
+            {evidenceLoading
+              ? 'Reviewing dataset gaps with web sources'
+              : evidence.batch?.state === 'error'
+                ? 'Evidence review unavailable / dataset unchanged'
+                : hasEvidence
+                  ? `Reviewed ${Object.keys(evidenceResults).length} of ${result.ingredients.length} ingredients / FROM WEB SOURCE REVIEW`
+                  : 'Automatic web review / never changes the facts'}
+          </span>
+        </div>
+      )}
+
+      {evidenceEnabled && productSummary && (
+        <div className="border-t border-[color:var(--report-rule)] px-5 py-4 sm:px-7">
+          <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--report-muted)]">
+            AI-written product reading / FROM WEB SOURCE REVIEW
+          </p>
+          <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--report-ink-strong)]">
+            {productSummary}
+          </p>
+        </div>
+      )}
+
       {/* D. Ingredients, inside the same sheet */}
       <section className="border-t border-[color:var(--report-rule)]">
         <div className="flex items-baseline justify-between gap-3 px-5 pb-3 pt-5 sm:px-7">
@@ -234,6 +286,7 @@ export const ReportCard: React.FC<ReportCardProps> = ({
               note={result.friendly_summary?.notes[ingredient.input_name]}
               webEnabled={webEnabled}
               webEntry={web.entries[ingredient.input_name]}
+              evidenceEntry={evidenceResults[ingredient.input_name]}
               onNameChange={(value) => onNameChange(index, value)}
               onRecheck={(value) => onRecheck(index, value)}
               onLoadWeb={(includeOther) =>

@@ -22,11 +22,16 @@ NETWORK_ERROR = "Web search is unavailable right now. Please try again later."
 PANEL_NOTE = "Unverified web context. This is not part of the assessment."
 
 # The only topic strings that may reach the query. Anything else is ignored.
+# The first four are the report's fixed mapping; the last three are the
+# toxicological endpoints the evidence review adds for dataset gaps.
 TOPIC_MAP = (
     "skin irritation",
     "allergy / sensitization",
     "use limits",
     "hazard classification",
+    "eye irritation",
+    "skin sensitization",
+    "toxicity",
 )
 
 

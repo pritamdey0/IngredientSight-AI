@@ -392,6 +392,135 @@ def test_report_endpoint_rejects_a_non_analysis_body(client):
     assert response.status_code == 422
 
 
+def test_health_reports_the_review_flag(client):
+    payload = client.get("/api/health", headers=headers("198.51.100.40")).json()
+    assert isinstance(payload["evidence_enabled"], bool)
+
+
+def test_evidence_endpoint_returns_dataset_endpoints_offline(client):
+    ingredient = client.post(
+        "/api/analyze",
+        json={"text": "Benzidine", "include_summary": False},
+        headers=headers("198.51.100.41"),
+    ).json()["ingredients"][0]
+    response = client.post(
+        "/api/evidence",
+        json={"ingredient": ingredient},
+        headers=headers("198.51.100.42"),
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["enabled"] is True
+    # Without keys there is no research, but the dataset endpoints are still there.
+    assert payload["researched"] is False
+    assert payload["message"]
+    fields = {endpoint["field"] for endpoint in payload["endpoints"]}
+    assert {"skin_irritation", "eye_irritation", "skin_sensitization", "toxicity"} <= fields
+
+
+def test_evidence_endpoint_requires_an_ingredient(client):
+    response = client.post("/api/evidence", json={}, headers=headers("198.51.100.43"))
+    assert response.status_code == 422
+
+
+def test_evidence_batch_is_disabled_without_configuration(client):
+    analysis = client.post(
+        "/api/analyze",
+        json={"text": "Benzidine, Glycerin", "include_summary": False},
+        headers=headers("198.51.100.44"),
+    ).json()
+    response = client.post(
+        "/api/evidence/batch",
+        json={"analysis": analysis, "include_product_summary": True},
+        headers=headers("198.51.100.45"),
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["enabled"] is False
+    assert payload["results"] == {}
+    assert payload["product_summary"] is None
+
+
+def test_evidence_batch_rejects_an_analysis_without_ingredients(client):
+    response = client.post(
+        "/api/evidence/batch",
+        json={"analysis": {"summary": {}}},
+        headers=headers("198.51.100.46"),
+    )
+    assert response.status_code == 422
+
+
+def test_report_endpoint_renders_the_evidence_block(client):
+    analysis = client.post(
+        "/api/analyze",
+        json={"text": "Benzidine, Glycerin", "include_summary": False},
+        headers=headers("198.51.100.47"),
+    ).json()
+    review = {
+        "Benzidine": {
+            "enabled": True,
+            "researched": True,
+            "ingredient": "Benzidine",
+            "message": None,
+            "conclusion": "The dataset leaves the skin endpoints open.",
+            "endpoints": [
+                {
+                    "field": "skin_irritation",
+                    "label": "Skin irritation",
+                    "dataset_status": "NOT_ASSESSED",
+                    "dataset_value": None,
+                    "missing": True,
+                    "finding": "The retrieved sources describe a dermal endpoint.",
+                    "assessment": "Supported",
+                    "limitations": None,
+                    "evidence_label": "FROM WEB SOURCE REVIEW",
+                    "sources": [
+                        {
+                            "title": "SCCS opinion",
+                            "site": "ec.europa.eu",
+                            "publisher": "ec.europa.eu",
+                            "url": "https://ec.europa.eu/x",
+                            "source_type": "official_scientific",
+                            "retrieved_date": "2026-11-11",
+                            "excerpt": "Verbatim sentence from the source.",
+                        }
+                    ],
+                }
+            ],
+        }
+    }
+    response = client.post(
+        "/api/report",
+        json={
+            "analysis": analysis,
+            "evidence": review,
+            "product_summary": "Two ingredient names were checked.",
+        },
+        headers=headers("198.51.100.48"),
+    )
+    assert response.status_code == 200
+    markdown = response.json()["markdown_report"]
+    assert "External evidence review (FROM WEB SOURCE REVIEW)" in markdown
+    assert "The retrieved sources describe a dermal endpoint." in markdown
+    assert "https://ec.europa.eu/x" in markdown
+    assert "| Prohibited | 1 |" in markdown
+    assert "AI-written reading of the data above: Two ingredient names were checked." in markdown
+
+
+def test_report_endpoint_rejects_a_non_object_evidence_body(client):
+    analysis = client.post(
+        "/api/analyze",
+        json={"text": "Benzidine", "include_summary": False},
+        headers=headers("198.51.100.49"),
+    ).json()
+    response = client.post(
+        "/api/report",
+        json={"analysis": analysis, "evidence": ["not", "an", "object"]},
+        headers=headers("198.51.100.50"),
+    )
+    assert response.status_code == 422
+
+
 def test_web_context_does_not_change_the_analysis(client, monkeypatch):
     before = client.post(
         "/api/analyze",

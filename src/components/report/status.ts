@@ -160,6 +160,18 @@ export const SOURCE_TYPE_LABELS: Record<string, string> = {
   other: 'Other',
 };
 
+/** The two evidence origins, used as visible labels in the report. */
+export const DATASET_LABEL = 'FROM DATASET';
+export const EVIDENCE_LABEL = 'FROM WEB SOURCE REVIEW';
+
+/** Neutral wording for a validated evidence assessment. Never a verdict. */
+export const EVIDENCE_ASSESSMENT_LABELS: Record<string, string> = {
+  Supported: 'Supported by the retrieved sources',
+  Limited: 'Limited evidence in the retrieved sources',
+  Conflicting: 'Conflicting evidence in the retrieved sources',
+  Insufficient: 'Insufficient evidence in the retrieved sources',
+};
+
 export const WEB_TOPICS = [
   'skin irritation',
   'allergy / sensitization',

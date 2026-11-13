@@ -26,7 +26,7 @@ export const Analyzer: React.FC<AnalyzerProps> = ({ onBackToLanding }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
-  const [serverInfo, setServerInfo] = useState<{ web: boolean; ocr: boolean } | null>(null);
+  const [serverInfo, setServerInfo] = useState<{ web: boolean; ocr: boolean; evidence: boolean } | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const resultsRef = useRef<HTMLDivElement | null>(null);
 
@@ -34,10 +34,16 @@ export const Analyzer: React.FC<AnalyzerProps> = ({ onBackToLanding }) => {
     let active = true;
     health()
       .then((info) => {
-        if (active) setServerInfo({ web: info.web_context_enabled, ocr: info.ocr_available });
+        if (active) {
+          setServerInfo({
+            web: info.web_context_enabled,
+            ocr: info.ocr_available,
+            evidence: info.evidence_enabled,
+          });
+        }
       })
       .catch(() => {
-        if (active) setServerInfo({ web: false, ocr: true });
+        if (active) setServerInfo({ web: false, ocr: true, evidence: false });
       });
     return () => { active = false; };
   }, []);
@@ -103,14 +109,12 @@ export const Analyzer: React.FC<AnalyzerProps> = ({ onBackToLanding }) => {
 
   return (
     <div className="report-page relative min-h-screen overflow-x-hidden bg-[#0a0a0a] text-white">
-      {/* Background image — same as before */}
+      {/* Background image */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden print:hidden" aria-hidden="true">
         <img
-          src="/assets/ascii-dna.webp"
-          srcSet="/assets/ascii-dna-sm.webp 1024w, /assets/ascii-dna.webp 2048w"
-          sizes="100vw"
+          src="/assets/ascii-magic-1.png"
           alt=""
-          className="h-full w-full scale-[1.03] object-cover opacity-60"
+          className="h-full w-full scale-[1.02] object-cover opacity-60"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/45 to-black/85" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,rgba(0,0,0,0.6)_100%)]" />
@@ -279,6 +283,7 @@ export const Analyzer: React.FC<AnalyzerProps> = ({ onBackToLanding }) => {
               result={result}
               names={names}
               webEnabled={serverInfo?.web ?? true}
+              evidenceEnabled={serverInfo?.evidence ?? false}
               onNameChange={(index, value) =>
                 setNames((current) =>
                   current.map((name, position) => (position === index ? value : name)),

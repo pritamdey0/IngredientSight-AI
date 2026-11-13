@@ -130,6 +130,36 @@ class ReportRequest(BaseModel):
         default=None,
         description="Web panels the user loaded, keyed by input ingredient name",
     )
+    evidence: dict[str, Any] | None = Field(
+        default=None,
+        description="Automated evidence reviews, keyed by input ingredient name",
+    )
+    product_summary: str | None = Field(
+        default=None, description="Optional validated product-level reading"
+    )
+
+
+class EvidenceRequest(BaseModel):
+    ingredient: dict = Field(
+        ..., description="One ingredient object, exactly as returned by /api/analyze"
+    )
+
+
+class EvidenceBatchRequest(BaseModel):
+    analysis: dict = Field(
+        ..., description="The finished analysis, exactly as returned by /api/analyze"
+    )
+    include_product_summary: bool = Field(
+        default=True, description="Also ask for one validated product-level reading"
+    )
+
+    @field_validator("analysis")
+    @classmethod
+    def _validate_analysis(cls, value: dict) -> dict:
+        ingredients = value.get("ingredients") if isinstance(value, dict) else None
+        if not isinstance(ingredients, list) or not ingredients:
+            raise ValueError("analysis: expected an analysis result with ingredients.")
+        return value
 
 
 class SourceOut(BaseModel):
@@ -143,6 +173,11 @@ class SourceOut(BaseModel):
 class CandidateOut(BaseModel):
     name: str
     score: float | None = None
+
+
+class DatasetLinkOut(BaseModel):
+    label: str
+    url: str
 
 
 class IngredientOut(BaseModel):
@@ -160,6 +195,17 @@ class IngredientOut(BaseModel):
     unknown_fields: list[str]
     sources: list[SourceOut]
     candidates: list[CandidateOut]
+    # Dataset identity (FROM DATASET).
+    chemical_name: str = config.NO_DATA
+    cas_number: str = config.NO_DATA
+    ec_number: str = config.NO_DATA
+    annex_title: str = config.NO_DATA
+    toxicity_class: str = config.NO_DATA
+    allergy_risk: str = config.NO_DATA
+    echa_hazard_classes: str = config.NO_DATA
+    regulation_basis: str = config.NO_DATA
+    source_url: str | None = None
+    dataset_links: list[DatasetLinkOut] = Field(default_factory=list)
 
 
 class SummaryOut(BaseModel):
@@ -227,6 +273,44 @@ class ReportResponse(BaseModel):
     markdown_report: str
 
 
+class EvidenceSourceOut(BaseModel):
+    title: str
+    site: str
+    publisher: str
+    url: str
+    source_type: str
+    retrieved_date: str
+    excerpt: str
+
+
+class EvidenceEndpointOut(BaseModel):
+    field: str
+    label: str
+    dataset_status: str
+    dataset_value: str | None = None
+    missing: bool
+    finding: str | None = None
+    assessment: str | None = None
+    limitations: str | None = None
+    evidence_label: str | None = None
+    sources: list[EvidenceSourceOut] = Field(default_factory=list)
+
+
+class EvidenceResponse(BaseModel):
+    enabled: bool
+    researched: bool
+    ingredient: str
+    message: str | None = None
+    conclusion: str | None = None
+    endpoints: list[EvidenceEndpointOut] = Field(default_factory=list)
+
+
+class EvidenceBatchResponse(BaseModel):
+    enabled: bool
+    results: dict[str, EvidenceResponse]
+    product_summary: str | None = None
+
+
 class HealthResponse(BaseModel):
     status: str
     dataset_loaded: bool
@@ -236,3 +320,4 @@ class HealthResponse(BaseModel):
     ocr_available: bool
     llm_enabled: bool
     web_context_enabled: bool
+    evidence_enabled: bool

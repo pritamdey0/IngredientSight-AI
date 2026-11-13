@@ -16,7 +16,18 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from . import config, data_layer, llm_summary, models, ocr, parser, report, rules, web_context
+from . import (
+    config,
+    data_layer,
+    evidence,
+    llm_summary,
+    models,
+    ocr,
+    parser,
+    report,
+    rules,
+    web_context,
+)
 
 RATE_WINDOW_SECONDS = 60
 _buckets: dict[tuple[str, str], deque[float]] = {}
@@ -137,6 +148,7 @@ def health() -> dict:
         "ocr_available": ocr.is_available(),
         "llm_enabled": config.llm_enabled(),
         "web_context_enabled": config.web_context_enabled(),
+        "evidence_enabled": config.evidence_enabled(),
     }
 
 
@@ -217,18 +229,49 @@ def web_context_batch(payload: models.WebBatchRequest, request: Request) -> dict
     )
 
 
+@app.post("/api/evidence", response_model=models.EvidenceResponse)
+def evidence_endpoint(payload: models.EvidenceRequest, request: Request) -> dict:
+    """Automatically research the dataset gaps of one ingredient. Never raises."""
+    _check_rate(request, "web", config.RATE_LIMIT_WEB)
+    return evidence.research_one(payload.ingredient)
+
+
+@app.post("/api/evidence/batch", response_model=models.EvidenceBatchResponse)
+def evidence_batch(payload: models.EvidenceBatchRequest, request: Request) -> dict:
+    # One click is one action: the batch counts once against the web bucket.
+    _check_rate(request, "web", config.RATE_LIMIT_WEB)
+    if not config.evidence_enabled():
+        return {"enabled": False, "results": {}, "product_summary": None}
+    batch = evidence.research_many(payload.analysis["ingredients"])
+    product = None
+    if payload.include_product_summary:
+        product = evidence.build_product_summary(payload.analysis, batch["results"])
+    return {
+        "enabled": batch["enabled"],
+        "results": batch["results"],
+        "product_summary": product,
+    }
+
+
 @app.post("/api/report", response_model=models.ReportResponse)
 def report_endpoint(payload: models.ReportRequest) -> dict:
-    """Re-render the template report with the web panels the user loaded."""
+    """Re-render the template report with the review panels the user loaded."""
     analysis = payload.analysis
     if not isinstance(analysis.get("ingredients"), list) or "summary" not in analysis:
         raise HTTPException(status_code=422, detail="analysis: not an analysis result.")
     web = payload.web_context or {}
     if not isinstance(web, dict):
         raise HTTPException(status_code=422, detail="web_context: expected an object.")
+    review = payload.evidence or {}
+    if not isinstance(review, dict):
+        raise HTTPException(status_code=422, detail="evidence: expected an object.")
     return {
         "markdown_report": report.build_markdown(
-            analysis, web_context=web, generated_at=_timestamp()
+            analysis,
+            web_context=web,
+            generated_at=_timestamp(),
+            evidence=review,
+            product_summary=payload.product_summary,
         )
     }
 

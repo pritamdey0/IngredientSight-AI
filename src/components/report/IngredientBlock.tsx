@@ -2,13 +2,16 @@
 
 import React, { useState } from 'react';
 import { ChevronDown, Info, Pencil, RotateCcw } from 'lucide-react';
-import type { Ingredient } from '../../lib/api';
+import type { EvidenceResponse, Ingredient } from '../../lib/api';
+import { EvidencePanel } from './EvidencePanel';
 import { WebPanel } from './WebPanel';
 import {
+  DATASET_LABEL,
   LONG_FIELDS,
   MATCH_LABELS,
   NO_ANNEX_SENTENCE,
   STATUS_UI,
+  isNoData,
   missingFieldLabels,
   needsWebPanel,
   presentFacts,
@@ -23,6 +26,7 @@ interface IngredientBlockProps {
   note?: string;
   webEnabled: boolean;
   webEntry?: WebEntry;
+  evidenceEntry?: EvidenceResponse;
   onNameChange: (value: string) => void;
   onRecheck: (name: string) => void;
   onLoadWeb: (includeOther: boolean) => void;
@@ -44,6 +48,7 @@ export const IngredientBlock: React.FC<IngredientBlockProps> = ({
   note,
   webEnabled,
   webEntry,
+  evidenceEntry,
   onNameChange,
   onRecheck,
   onLoadWeb,
@@ -57,6 +62,13 @@ export const IngredientBlock: React.FC<IngredientBlockProps> = ({
   const topics = webTopicsFor(ingredient);
   const dirty = name.trim() !== ingredient.input_name;
   const flags = ingredient.flags;
+
+  const identity: { label: string; value: string }[] = [];
+  if (!isNoData(ingredient.chemical_name)) identity.push({ label: 'Chemical name', value: ingredient.chemical_name as string });
+  if (!isNoData(ingredient.cas_number)) identity.push({ label: 'CAS number', value: ingredient.cas_number as string });
+  if (!isNoData(ingredient.ec_number)) identity.push({ label: 'EC number', value: ingredient.ec_number as string });
+  const sourceLinks = ingredient.dataset_links ?? [];
+  const showsIdentity = identity.length > 0 || sourceLinks.length > 0;
 
   return (
     <article
@@ -98,6 +110,31 @@ export const IngredientBlock: React.FC<IngredientBlockProps> = ({
             <p className="mt-2 border-l border-[color:var(--report-border)] pl-3 text-[12px] leading-relaxed text-[var(--report-muted)]">
               {note}
             </p>
+          )}
+
+          {showsIdentity && (
+            <div className="mt-3">
+              <Label>Identity / {DATASET_LABEL}</Label>
+              <ul className="mt-1 space-y-0.5">
+                {identity.map((item) => (
+                  <li key={item.label} className="font-mono text-[10.5px] leading-relaxed text-[var(--report-muted)]">
+                    <span className="text-[var(--report-ink-strong)]">{item.label}</span> / {item.value}
+                  </li>
+                ))}
+                {sourceLinks.map((link) => (
+                  <li key={link.url}>
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-[10.5px] leading-relaxed text-[var(--web-link)] underline decoration-[color:var(--web-border)] underline-offset-4 hover:decoration-[color:var(--web-link)]"
+                    >
+                      Official source / {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
 
           <div className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
@@ -196,6 +233,10 @@ export const IngredientBlock: React.FC<IngredientBlockProps> = ({
               {missing.join(', ')}.
             </p>
           )}
+
+          {evidenceEntry &&
+            (evidenceEntry.endpoints.some((endpoint) => endpoint.missing) ||
+              Boolean(evidenceEntry.message)) && <EvidencePanel entry={evidenceEntry} />}
 
           {ingredient.candidates.length > 0 && (
             <div className="mt-3">
