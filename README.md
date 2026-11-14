@@ -334,7 +334,7 @@ Returns the current system health and status of OCR and AI engines.
 
 ## 📜 License
 
-This project is licensed under the **MIT License**.
+This project is licensed underr the **MIT License**.
 
 <br/>
 
